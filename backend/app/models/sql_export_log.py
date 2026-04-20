@@ -19,6 +19,7 @@ class SqlExportLog(db.Model):
     file_size = db.Column(db.BigInteger, comment='文件大小（字节）')
     duration_seconds = db.Column(db.Float, comment='耗时（秒）')
     error_message = db.Column(db.Text, comment='错误信息')
+    final_sql = db.Column(db.Text, comment='实际执行的完整SQL')
     created_at = db.Column(db.DateTime, default=datetime.now, comment='创建时间')
     
     def to_dict(self):
@@ -39,6 +40,7 @@ class SqlExportLog(db.Model):
             'file_path': self.file_path,
             'file_size': self.file_size,
             'duration_seconds': self.duration_seconds,
+            'final_sql': self.final_sql,
             'error_message': self.error_message,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

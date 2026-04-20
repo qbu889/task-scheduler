@@ -32,8 +32,11 @@ def calculate_time_param(param_config):
     param_type = param_config.get('type', 'fixed')
     
     if param_type == 'fixed':
-        # 固定时间
-        return param_config.get('value', '')
+        # 固定时间（兼容 fixed_time 和 value 两种字段）
+        fixed_value = param_config.get('fixed_time') or param_config.get('value')
+        if not fixed_value:
+            raise ValueError(f"Fixed time value is empty for param: {param_config}")
+        return fixed_value
     
     elif param_type == 'relative':
         # 相对时间

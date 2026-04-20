@@ -42,8 +42,16 @@
           </template>
         </el-table-column>
         <el-table-column prop="file_path" label="文件路径" min-width="250" show-overflow-tooltip />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
+            <el-button 
+              v-if="row.file_path" 
+              size="small" 
+              type="primary" 
+              @click="downloadFile(row)"
+            >
+              下载
+            </el-button>
             <el-button size="small" @click="showLogDetail(row)">
               详情
             </el-button>
@@ -65,7 +73,7 @@
     </el-card>
 
     <!-- 日志详情对话框 -->
-    <el-dialog v-model="detailVisible" title="执行日志详情" width="700px">
+    <el-dialog v-model="detailVisible" title="执行日志详情" width="1000px">
       <el-descriptions :column="2" border v-if="currentLog">
         <el-descriptions-item label="日志ID">{{ currentLog.log_id }}</el-descriptions-item>
         <el-descriptions-item label="任务ID">{{ currentLog.task_id }}</el-descriptions-item>
@@ -85,9 +93,24 @@
         </el-descriptions-item>
         <el-descriptions-item label="文件路径" :span="2">
           {{ currentLog.file_path || '-' }}
+          <el-button 
+            v-if="currentLog.file_path" 
+            size="small" 
+            type="primary" 
+            @click="downloadFile(currentLog)"
+            style="margin-left: 10px;"
+          >
+            下载
+          </el-button>
         </el-descriptions-item>
         <el-descriptions-item label="错误信息" :span="2" v-if="currentLog.error_message">
           <el-alert :title="currentLog.error_message" type="error" :closable="false" />
+        </el-descriptions-item>
+        
+        <el-descriptions-item label="执行SQL" :span="2" v-if="currentLog.final_sql">
+          <div class="sql-display">
+            <pre>{{ currentLog.final_sql }}</pre>
+          </div>
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -97,6 +120,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { getLogs } from '@/api/sqlExport'
+import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -148,6 +172,54 @@ const showLogDetail = (row) => {
   detailVisible.value = true
 }
 
+// 下载文件
+const downloadFile = async (row) => {
+  if (!row.log_id) {
+    ElMessage.warning('日志ID不存在')
+    return
+  }
+  
+  try {
+    const downloadUrl = `http://localhost:5000/api/sql-export/logs/${row.log_id}/download`
+    
+    // 使用 fetch 获取文件
+    const response = await fetch(downloadUrl)
+    
+    if (!response.ok) {
+      throw new Error('下载失败')
+    }
+    
+    // 获取文件名
+    const contentDisposition = response.headers.get('content-disposition')
+    let filename = `file_${row.log_id}.xlsx`
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (match && match[1]) {
+        filename = match[1].replace(/['"]/g, '')
+      }
+    }
+    
+    // 转换为 Blob
+    const blob = await response.blob()
+    
+    // 创建隐藏的 a 标签触发下载
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    // 释放 URL
+    URL.revokeObjectURL(link.href)
+    
+    ElMessage.success('下载成功')
+  } catch (error) {
+    console.error('Download error:', error)
+    ElMessage.error('下载失败: ' + error.message)
+  }
+}
+
 // 格式化文件大小
 const formatFileSize = (bytes) => {
   if (!bytes) return '-'
@@ -169,5 +241,25 @@ onMounted(() => {
 
 .search-form {
   margin-bottom: 20px;
+}
+/* 日志详情对话框 */
+.sql-display {
+  width: 100%;
+  max-height: 400px;
+  overflow: auto;
+  background-color: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.sql-display pre {
+  margin: 0;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #303133;
 }
 </style>

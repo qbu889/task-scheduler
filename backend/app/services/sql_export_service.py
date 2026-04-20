@@ -105,8 +105,14 @@ class SqlExportService:
             # 如果更新了数据源配置，需要重新加密密码
             if 'datasource_config' in config:
                 datasource_config = config['datasource_config']
-                if 'password' in datasource_config and datasource_config['password']:
-                    datasource_config['password'] = encrypt(datasource_config['password'])
+                # 如果密码为空或是掩码（'***'），则保留原密码
+                if 'password' in datasource_config:
+                    if datasource_config['password'] and datasource_config['password'] != '***':
+                        datasource_config['password'] = encrypt(datasource_config['password'])
+                    else:
+                        # 保留原有密码
+                        original_config = json.loads(task.datasource_config)
+                        datasource_config['password'] = original_config.get('password', '')
                 task.datasource_config = json.dumps(datasource_config)
             
             db.session.commit()
@@ -165,7 +171,7 @@ class SqlExportService:
         return task
     
     @staticmethod
-    def get_task_list(page=1, page_size=10, is_enabled=None):
+    def get_task_list(page=1, page_size=10, is_enabled=None, task_name=None):
         """
         获取任务列表
         
@@ -173,6 +179,7 @@ class SqlExportService:
             page (int): 页码
             page_size (int): 每页数量
             is_enabled (int): 筛选条件（0-停用，1-启用，None-全部）
+            task_name (str): 任务名称搜索（模糊匹配）
             
         Returns:
             tuple: (tasks, total, page, page_size)
@@ -181,6 +188,9 @@ class SqlExportService:
         
         if is_enabled is not None:
             query = query.filter_by(is_enabled=is_enabled)
+        
+        if task_name:
+            query = query.filter(SqlExportTask.task_name.like(f'%{task_name}%'))
         
         query = query.order_by(SqlExportTask.created_at.desc())
         
@@ -245,7 +255,7 @@ class SqlExportService:
             logger.info(f"Executing SQL query for task {task_id}")
             query_start = time.time()
             
-            df, record_count = execute_sql(
+            df, record_count, final_sql = execute_sql(
                 datasource_config=datasource_config,
                 sql_template=task.sql_template,
                 time_params=time_params,
@@ -259,6 +269,7 @@ class SqlExportService:
                 logger.warning(f"Query returned no data for task {task_id}")
                 log.status = 'success'
                 log.record_count = 0
+                log.final_sql = final_sql
                 log.end_time = datetime.now()
                 log.duration_seconds = (log.end_time - log.start_time).total_seconds()
                 db.session.commit()
@@ -287,6 +298,7 @@ class SqlExportService:
             # 更新日志
             log.status = 'success'
             log.record_count = record_count
+            log.final_sql = final_sql
             log.file_path = ';'.join(file_paths) if file_paths else ''
             log.file_size = sum(get_file_size(fp) for fp in file_paths)
             log.end_time = datetime.now()
@@ -321,12 +333,13 @@ class SqlExportService:
             raise
     
     @staticmethod
-    def get_execution_logs(task_id=None, page=1, page_size=20):
+    def get_execution_logs(task_id=None, status=None, page=1, page_size=20):
         """
         获取执行日志
         
         Args:
             task_id (int): 任务ID（可选）
+            status (str): 执行状态（可选，'success' 或 'failed'）
             page (int): 页码
             page_size (int): 每页数量
             
@@ -337,6 +350,9 @@ class SqlExportService:
         
         if task_id:
             query = query.filter_by(task_id=task_id)
+        
+        if status:
+            query = query.filter_by(status=status)
         
         query = query.order_by(SqlExportLog.start_time.desc())
         

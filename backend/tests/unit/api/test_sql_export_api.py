@@ -2,8 +2,13 @@
 SQL导出API集成测试
 """
 import pytest
+import sys
+import os
 from unittest.mock import Mock, patch, MagicMock
 import json
+
+# 添加backend目录到Python路径
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
 
 class TestSqlExportApi:

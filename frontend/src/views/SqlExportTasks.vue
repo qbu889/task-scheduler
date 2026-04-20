@@ -25,7 +25,12 @@
           />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.is_enabled" placeholder="请选择" clearable>
+          <el-select 
+            v-model="searchForm.is_enabled" 
+            placeholder="请选择" 
+            clearable
+            style="width: 120px;"
+          >
             <el-option label="启用" :value="1" />
             <el-option label="停用" :value="0" />
           </el-select>
@@ -133,6 +138,104 @@
             <el-radio label="dm">达梦数据库</el-radio>
           </el-radio-group>
         </el-form-item>
+        
+        <!-- MySQL数据源配置 -->
+        <template v-if="taskForm.datasource_type === 'mysql'">
+          <el-form-item label="主机地址" prop="datasource_config.host">
+            <el-input 
+              v-model="taskForm.datasource_config.host" 
+              placeholder="127.0.0.1" 
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="端口" prop="datasource_config.port">
+            <el-input-number 
+              v-model="taskForm.datasource_config.port" 
+              :min="1" 
+              :max="65535"
+              style="width: 100%;"
+            />
+          </el-form-item>
+          <el-form-item label="用户名" prop="datasource_config.user">
+            <el-input 
+              v-model="taskForm.datasource_config.user" 
+              placeholder="root" 
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="密码" prop="datasource_config.password">
+            <el-input 
+              v-model="taskForm.datasource_config.password" 
+              type="password"
+              placeholder="请输入密码" 
+              show-password
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="数据库名" prop="datasource_config.database">
+            <el-input 
+              v-model="taskForm.datasource_config.database" 
+              placeholder="请输入数据库名" 
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="字符集">
+            <el-input 
+              v-model="taskForm.datasource_config.charset" 
+              placeholder="utf8mb4" 
+              class="claude-input"
+            />
+          </el-form-item>
+        </template>
+        
+        <!-- 达梦数据库配置 -->
+        <template v-if="taskForm.datasource_type === 'dm'">
+          <el-form-item label="主机地址" prop="datasource_config.host">
+            <el-input 
+              v-model="taskForm.datasource_config.host" 
+              placeholder="127.0.0.1" 
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="端口" prop="datasource_config.port">
+            <el-input-number 
+              v-model="taskForm.datasource_config.port" 
+              :min="1" 
+              :max="65535"
+              style="width: 100%;"
+            />
+          </el-form-item>
+          <el-form-item label="用户名" prop="datasource_config.user">
+            <el-input 
+              v-model="taskForm.datasource_config.user" 
+              placeholder="SYSDBA" 
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="密码" prop="datasource_config.password">
+            <el-input 
+              v-model="taskForm.datasource_config.password" 
+              type="password"
+              placeholder="请输入密码" 
+              show-password
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="数据库名" prop="datasource_config.database">
+            <el-input 
+              v-model="taskForm.datasource_config.database" 
+              placeholder="请输入数据库名" 
+              class="claude-input"
+            />
+          </el-form-item>
+          <el-form-item label="字符集">
+            <el-input 
+              v-model="taskForm.datasource_config.charset" 
+              placeholder="utf8" 
+              class="claude-input"
+            />
+          </el-form-item>
+        </template>
         <el-form-item label="SQL模板" prop="sql_template">
           <el-input
             v-model="taskForm.sql_template"
@@ -145,14 +248,79 @@
             💡 提示：使用 <code class="claude-code">:start_time</code> 和 <code class="claude-code">:end_time</code> 作为时间参数占位符
           </div>
         </el-form-item>
+        
+        <!-- 时间参数配置 -->
+        <el-form-item label="时间参数配置">
+          <div style="width: 100%;">
+            <div class="time-params-section">
+              <div class="time-param-item">
+                <label class="param-label">开始时间 (start_time)</label>
+                <el-radio-group v-model="taskForm.time_params.start_time.type" style="margin-bottom: 8px;">
+                  <el-radio label="relative">相对时间</el-radio>
+                  <el-radio label="fixed">固定时间</el-radio>
+                </el-radio-group>
+                
+                <template v-if="taskForm.time_params.start_time.type === 'relative'">
+                  <div style="display: flex; gap: 10px; align-items: center;">
+                    <span>偏移天数：</span>
+                    <el-input-number v-model="taskForm.time_params.start_time.offset_days" :min="-365" :max="365" style="width: 120px;" />
+                    <span>时间：</span>
+                    <el-time-picker v-model="taskForm.time_params.start_time.time_of_day" format="HH:mm:ss" value-format="HH:mm:ss" style="width: 120px;" />
+                  </div>
+                </template>
+                
+                <template v-if="taskForm.time_params.start_time.type === 'fixed'">
+                  <el-date-picker 
+                    v-model="taskForm.time_params.start_time.fixed_time" 
+                    type="datetime" 
+                    placeholder="选择日期时间" 
+                    format="YYYY-MM-DD HH:mm:ss"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    style="width: 100%;"
+                  />
+                </template>
+              </div>
+              
+              <div class="time-param-item" style="margin-top: 16px;">
+                <label class="param-label">结束时间 (end_time)</label>
+                <el-radio-group v-model="taskForm.time_params.end_time.type" style="margin-bottom: 8px;">
+                  <el-radio label="relative">相对时间</el-radio>
+                  <el-radio label="fixed">固定时间</el-radio>
+                </el-radio-group>
+                
+                <template v-if="taskForm.time_params.end_time.type === 'relative'">
+                  <div style="display: flex; gap: 10px; align-items: center;">
+                    <span>偏移天数：</span>
+                    <el-input-number v-model="taskForm.time_params.end_time.offset_days" :min="-365" :max="365" style="width: 120px;" />
+                    <span>时间：</span>
+                    <el-time-picker v-model="taskForm.time_params.end_time.time_of_day" format="HH:mm:ss" value-format="HH:mm:ss" style="width: 120px;" />
+                  </div>
+                </template>
+                
+                <template v-if="taskForm.time_params.end_time.type === 'fixed'">
+                  <el-date-picker 
+                    v-model="taskForm.time_params.end_time.fixed_time" 
+                    type="datetime" 
+                    placeholder="选择日期时间" 
+                    format="YYYY-MM-DD HH:mm:ss"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    style="width: 100%;"
+                  />
+                </template>
+              </div>
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="Cron表达式" prop="cron_expression">
           <el-input 
             v-model="taskForm.cron_expression" 
-            placeholder="例如: 0 0 2 * * *" 
+            placeholder="例如: */2 * * * *" 
             class="claude-input"
           />
           <div class="form-tip claude-caption mt-1">
-            🕐 每天凌晨2点执行: <code class="claude-code">0 0 2 * * *</code>
+            🕐 5字段格式（分 时 日 月 周），例：<br>
+            <code class="claude-code">*/2 * * * *</code> - 每2分钟 | 
+            <code class="claude-code">0 0 2 * * *</code> - 每天凌晨2点
           </div>
         </el-form-item>
         <el-form-item label="导出路径" prop="export_path">
@@ -232,7 +400,29 @@ const taskForm = reactive({
   task_id: null,
   task_name: '',
   datasource_type: 'mysql',
+  datasource_config: {
+    host: '127.0.0.1',
+    port: 3306,
+    user: 'root',
+    password: '',
+    database: '',
+    charset: 'utf8mb4'
+  },
   sql_template: '',
+  time_params: {
+    start_time: {
+      type: 'relative',
+      offset_days: -7,
+      time_of_day: '00:00:00',
+      fixed_time: ''  // 固定时间（当type='fixed'时使用）
+    },
+    end_time: {
+      type: 'relative',
+      offset_days: -1,
+      time_of_day: '23:59:59',
+      fixed_time: ''  // 固定时间（当type='fixed'时使用）
+    }
+  },
   cron_expression: '',
   export_path: 'D:/exports/',
   filename_prefix: '',
@@ -298,7 +488,29 @@ const resetForm = () => {
     task_id: null,
     task_name: '',
     datasource_type: 'mysql',
+    datasource_config: {
+      host: '127.0.0.1',
+      port: 3306,
+      user: 'root',
+      password: '',
+      database: '',
+      charset: 'utf8mb4'
+    },
     sql_template: '',
+    time_params: {
+      start_time: {
+        type: 'relative',
+        offset_days: -7,
+        time_of_day: '00:00:00',
+        fixed_time: ''  // 固定时间（当type='fixed'时使用）
+      },
+      end_time: {
+        type: 'relative',
+        offset_days: -1,
+        time_of_day: '23:59:59',
+        fixed_time: ''  // 固定时间（当type='fixed'时使用）
+      }
+    },
     cron_expression: '',
     export_path: 'D:/exports/',
     filename_prefix: '',
@@ -433,6 +645,28 @@ onMounted(() => {
 .form-tip {
   margin-top: var(--space-base);
   padding-left: var(--space-base);
+}
+
+/* 时间参数配置区域 */
+.time-params-section {
+  background-color: var(--color-ivory);
+  border: 1px solid var(--color-border-cream);
+  border-radius: var(--radius-comfortable);
+  padding: var(--space-xl);
+}
+
+.time-param-item {
+  padding: var(--space-lg);
+  background-color: white;
+  border-radius: var(--radius-comfortable);
+}
+
+.param-label {
+  display: block;
+  font-weight: var(--weight-medium);
+  color: var(--color-near-black);
+  margin-bottom: var(--space-lg);
+  font-size: var(--text-body);
 }
 
 /* 对话框中的表单 */

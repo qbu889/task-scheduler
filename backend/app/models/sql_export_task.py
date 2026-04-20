@@ -53,15 +53,21 @@ class SqlExportTask(db.Model):
     
     def to_dict(self):
         """
-        转换为字典（不包含敏感信息）
+        转换为字典（返回脱敏的数据源配置）
         
         Returns:
             dict: 任务信息字典
         """
+        # 获取脱敏的数据源配置
+        config = json.loads(self.datasource_config)
+        has_password = bool(config.get('password'))
+        config['password'] = '***' if has_password else ''  # 隐藏真实密码
+        
         return {
             'task_id': self.task_id,
             'task_name': self.task_name,
             'datasource_type': self.datasource_type,
+            'datasource_config': config,  # 返回脱敏后的配置
             'sql_template': self.sql_template,
             'time_params': self.get_time_params(),
             'cron_expression': self.cron_expression,

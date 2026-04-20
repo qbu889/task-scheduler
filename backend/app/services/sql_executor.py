@@ -91,7 +91,7 @@ def execute_sql(datasource_config, sql_template, time_params=None, batch_size=50
         batch_size (int): 分页大小
         
     Returns:
-        tuple: (DataFrame, total_rows)
+        tuple: (DataFrame, total_rows, final_sql)
     """
     engine = None
     try:
@@ -115,7 +115,7 @@ def execute_sql(datasource_config, sql_template, time_params=None, batch_size=50
         total_rows = len(df)
         logger.info(f"Query completed successfully: {total_rows} rows fetched")
         
-        return df, total_rows
+        return df, total_rows, final_sql
         
     except Exception as e:
         logger.error(f"SQL execution failed: {str(e)}", exc_info=True)

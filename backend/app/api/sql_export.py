@@ -17,13 +17,15 @@ def get_tasks():
         page = request.args.get('page', 1, type=int)
         page_size = request.args.get('page_size', 10, type=int)
         is_enabled = request.args.get('is_enabled', None, type=int)
+        task_name = request.args.get('task_name', None)
         
-        logger.info(f"Getting task list: page={page}, page_size={page_size}, is_enabled={is_enabled}")
+        logger.info(f"Getting task list: page={page}, page_size={page_size}, is_enabled={is_enabled}, task_name={task_name}")
         
         tasks, total, page, page_size = sql_export_service.get_task_list(
             page=page, 
             page_size=page_size,
-            is_enabled=is_enabled
+            is_enabled=is_enabled,
+            task_name=task_name
         )
         
         logger.info(f"Retrieved {len(tasks)} tasks (total: {total})")
@@ -213,11 +215,13 @@ def get_logs():
     """获取执行日志列表"""
     try:
         task_id = request.args.get('task_id', None, type=int)
+        status = request.args.get('status', None)
         page = request.args.get('page', 1, type=int)
         page_size = request.args.get('page_size', 20, type=int)
         
         logs, total, page, page_size = sql_export_service.get_execution_logs(
             task_id=task_id,
+            status=status,
             page=page,
             page_size=page_size
         )
@@ -249,4 +253,37 @@ def get_log_detail(log_id):
         
     except Exception as e:
         logger.error(f"Failed to get log detail: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@sql_export_bp.route('/logs/<int:log_id>/download', methods=['GET'])
+def download_log_file(log_id):
+    """下载日志生成的文件"""
+    from app.models.sql_export_log import SqlExportLog
+    from flask import send_file
+    import os
+    
+    try:
+        log = SqlExportLog.query.get(log_id)
+        if not log:
+            return jsonify({'success': False, 'message': 'Log not found'}), 404
+        
+        if not log.file_path:
+            return jsonify({'success': False, 'message': 'File not found'}), 404
+        
+        if not os.path.exists(log.file_path):
+            return jsonify({'success': False, 'message': 'File does not exist'}), 404
+        
+        # 提取文件名
+        filename = os.path.basename(log.file_path)
+        
+        # 发送文件
+        return send_file(
+            log.file_path,
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to download file: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500

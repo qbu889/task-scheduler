@@ -86,7 +86,7 @@ def create_app(config_class=None):
     
     # 初始化扩展
     db.init_app(app)
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     
     # 注册蓝图
     register_blueprints(app)
