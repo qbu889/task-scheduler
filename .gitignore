@@ -1,0 +1,99 @@
+# ============================================
+# Task Scheduler - Git Ignore Rules
+# ============================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Flask
+instance/
+.webassets-cache
+*.log
+
+# Environment Variables (包含敏感信息)
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.development
+backend/.env.production
+frontend/.env
+frontend/.env.development
+frontend/.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite
+dist/
+dist-ssr/
+*.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.xml
+test_coverage_report/
+doc/test_coverage_report/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# Secrets
+*.pem
+*.key
+secrets/
+credentials.json

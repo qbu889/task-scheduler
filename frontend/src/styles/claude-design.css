@@ -1,0 +1,408 @@
+/**
+ * Claude Design System - CSS Variables
+ * 基于Anthropic设计语言的暖色调、编辑级排版风格
+ */
+
+:root {
+  /* ===== 色彩系统 ===== */
+  
+  /* 主色调 */
+  --color-parchment: #f5f4ed;        /* 页面背景 - 暖羊皮纸色 */
+  --color-ivory: #faf9f5;            /* 卡片表面 - 象牙白 */
+  --color-near-black: #141413;       /* 主要文字 - 暖近黑色 */
+  --color-olive-gray: #5e5d59;       /* 次要文字 - 橄榄灰 */
+  --color-stone-gray: #87867f;       /* 三级文字 - 石灰色 */
+  --color-terracotta: #c96442;       /* 品牌CTA - 赤陶色 */
+  --color-coral: #d97757;            /* 珊瑚强调色 */
+  
+  /* 辅助色 */
+  --color-warm-sand: #e8e6dc;        /* 按钮背景 - 暖沙色 */
+  --color-charcoal-warm: #4d4c48;    /* 按钮文字 - 暖炭色 */
+  --color-dark-surface: #30302e;     /* 深色表面 - 暗木炭 */
+  --color-deep-dark: #141413;        /* 深色背景 */
+  --color-warm-silver: #b0aea5;      /* 深色表面文字 */
+  
+  /* 语义色 */
+  --color-error: #b53333;            /* 错误深红 */
+  --color-focus-blue: #3898ec;       /* 焦点蓝（唯一冷色） */
+  
+  /* 边框色 */
+  --color-border-cream: #f0eee6;     /* 标准边框 - 奶油色 */
+  --color-border-warm: #e8e6dc;      /* 强调边框 - 暖色 */
+  --color-border-dark: #30302e;      /* 深色边框 */
+  
+  /* 环状阴影色 */
+  --color-ring-warm: #d1cfc5;        /* 按钮悬停/焦点环 */
+  --color-ring-subtle: #dedc01;      /* 浅色交互表面环 */
+  --color-ring-deep: #c2c0b6;        /* 激活/按下状态环 */
+  
+  /* ===== 字体系统 ===== */
+  
+  /* 字体家族 */
+  --font-serif: 'Georgia', 'Times New Roman', serif;           /* Anthropic Serif替代 */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;  /* Anthropic Sans替代 */
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;  /* Anthropic Mono替代 */
+  
+  /* 字号 */
+  --text-display: 4rem;          /* 64px - Hero标题 */
+  --text-section: 3.25rem;       /* 52px - 区块标题 */
+  --text-subheading-lg: 2.3rem;  /* ~37px - 大副标题 */
+  --text-subheading: 2rem;       /* 32px - 副标题 */
+  --text-subheading-sm: 1.6rem;  /* ~26px - 小副标题 */
+  --text-feature: 1.3rem;        /* ~21px - 功能标题 */
+  --text-body-serif: 1.06rem;    /* 17px - 衬线正文 */
+  --text-body-lg: 1.25rem;       /* 20px - 大正文 */
+  --text-body: 1rem;             /* 16px - 标准正文 */
+  --text-body-sm: 0.94rem;       /* 15px - 小正文 */
+  --text-caption: 0.88rem;       /* 14px - 说明文字 */
+  --text-label: 0.75rem;         /* 12px - 标签 */
+  --text-overline: 0.63rem;      /* 10px - 上标 */
+  --text-micro: 0.6rem;          /* 9.6px - 微小文字 */
+  --text-code: 0.94rem;          /* 15px - 代码 */
+  
+  /* 字重 */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  
+  /* 行高 */
+  --leading-tight: 1.10;         /* 紧凑标题 */
+  --leading-snug: 1.20;          /* 稍紧标题 */
+  --leading-normal: 1.30;        /* 正常标题 */
+  --leading-relaxed: 1.60;       /* 宽松正文 */
+  --leading-loose: 1.43;         /* 说明文字 */
+  
+  /* 字母间距 */
+  --tracking-tight: -0.32px;     /* 代码 */
+  --tracking-normal: normal;
+  --tracking-wide: 0.12px;       /* 小标签 */
+  --tracking-wider: 0.5px;       /* 上标 */
+  
+  /* ===== 间距系统 ===== */
+  
+  --space-xs: 3px;
+  --space-sm: 4px;
+  --space-md: 6px;
+  --space-base: 8px;
+  --space-lg: 10px;
+  --space-xl: 12px;
+  --space-2xl: 16px;
+  --space-3xl: 20px;
+  --space-4xl: 24px;
+  --space-5xl: 30px;
+  
+  /* ===== 圆角系统 ===== */
+  
+  --radius-sharp: 4px;                    /* 锐角 */
+  --radius-subtle: 6px;                   /* 微妙圆角 */
+  --radius-comfortable: 8px;              /* 舒适圆角 - 标准按钮、卡片 */
+  --radius-generous: 12px;                /* 慷慨圆角 - 主要按钮、输入框 */
+  --radius-very: 16px;                    /* 非常圆角 - 特色容器 */
+  --radius-highly: 24px;                  /* 高度圆角 - 标签式元素 */
+  --radius-maximum: 32px;                 /* 最大圆角 - Hero容器 */
+  
+  /* ===== 阴影系统 ===== */
+  
+  /* Level 0: 平面 */
+  --shadow-flat: none;
+  
+  /* Level 1: 包含 - 细边框 */
+  --shadow-contained-light: 0 0 0 1px var(--color-border-cream);
+  --shadow-contained-dark: 0 0 0 1px var(--color-border-dark);
+  
+  /* Level 2: 环状阴影 - 交互状态 */
+  --shadow-ring-warm: 0 0 0 1px var(--color-ring-warm);
+  --shadow-ring-subtle: 0 0 0 1px var(--color-ring-subtle);
+  --shadow-ring-deep: 0 0 0 1px var(--color-ring-deep);
+  
+  /* Level 3: 轻语阴影 - 悬浮内容 */
+  --shadow-whisper: 0 4px 24px rgba(0, 0, 0, 0.05);
+  
+  /* Level 4: 内嵌阴影 - 激活/按下状态 */
+  --shadow-inset: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  
+  /* ===== 过渡动画 ===== */
+  
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+  
+  /* ===== Z-index层级 ===== */
+  
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+}
+
+/* ===== 暗色主题变量 ===== */
+
+[data-theme='dark'] {
+  --color-bg-primary: var(--color-deep-dark);
+  --color-bg-secondary: var(--color-dark-surface);
+  --color-text-primary: var(--color-ivory);
+  --color-text-secondary: var(--color-warm-silver);
+  --color-border: var(--color-border-dark);
+}
+
+/* ===== 全局基础样式 ===== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-relaxed);
+  color: var(--color-near-black);
+  background-color: var(--color-parchment);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== 排版类 ===== */
+
+.claude-heading {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-medium);
+  color: var(--color-near-black);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-normal);
+}
+
+.claude-heading--display {
+  font-size: var(--text-display);
+  line-height: var(--leading-tight);
+}
+
+.claude-heading--section {
+  font-size: var(--text-section);
+  line-height: var(--leading-snug);
+}
+
+.claude-heading--sub {
+  font-size: var(--text-subheading);
+  line-height: var(--leading-tight);
+}
+
+.claude-heading--feature {
+  font-size: var(--text-feature);
+  line-height: var(--leading-snug);
+}
+
+.claude-body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-relaxed);
+  color: var(--color-near-black);
+}
+
+.claude-body--large {
+  font-size: var(--text-body-lg);
+}
+
+.claude-body--secondary {
+  color: var(--color-olive-gray);
+}
+
+.claude-caption {
+  font-size: var(--text-caption);
+  line-height: var(--leading-loose);
+  color: var(--color-stone-gray);
+}
+
+.claude-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  letter-spacing: var(--tracking-tight);
+  background-color: var(--color-warm-sand);
+  padding: 2px 6px;
+  border-radius: var(--radius-subtle);
+}
+
+/* ===== 布局类 ===== */
+
+.claude-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-4xl);
+}
+
+.claude-section {
+  padding: var(--space-5xl) 0;
+}
+
+.claude-card {
+  background-color: var(--color-ivory);
+  border: 1px solid var(--color-border-cream);
+  border-radius: var(--radius-comfortable);
+  box-shadow: var(--shadow-whisper);
+  padding: var(--space-4xl);
+  transition: box-shadow var(--transition-base);
+}
+
+.claude-card:hover {
+  box-shadow: var(--shadow-whisper), var(--shadow-ring-warm);
+}
+
+.claude-card--featured {
+  border-radius: var(--radius-very);
+}
+
+/* ===== 按钮类 ===== */
+
+.claude-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-base) var(--space-2xl) var(--space-base) var(--space-xl);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  border: none;
+  border-radius: var(--radius-comfortable);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+}
+
+.claude-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-blue);
+}
+
+/* 次要按钮 - Warm Sand */
+.claude-btn--secondary {
+  background-color: var(--color-warm-sand);
+  color: var(--color-charcoal-warm);
+  box-shadow: var(--shadow-contained-light), 0 0 0 1px var(--color-ring-warm);
+}
+
+.claude-btn--secondary:hover {
+  background-color: var(--color-border-warm);
+  box-shadow: var(--shadow-ring-warm);
+}
+
+.claude-btn--secondary:active {
+  box-shadow: var(--shadow-inset);
+}
+
+/* 主要CTA按钮 - Terracotta */
+.claude-btn--primary {
+  background-color: var(--color-terracotta);
+  color: var(--color-ivory);
+  border-radius: var(--radius-generous);
+  box-shadow: 0 0 0 0 var(--color-terracotta), 0 0 0 1px var(--color-terracotta);
+}
+
+.claude-btn--primary:hover {
+  background-color: var(--color-coral);
+  box-shadow: var(--shadow-ring-warm);
+}
+
+.claude-btn--primary:active {
+  box-shadow: var(--shadow-inset);
+}
+
+/* 深色按钮 */
+.claude-btn--dark {
+  background-color: var(--color-dark-surface);
+  color: var(--color-ivory);
+  border-radius: var(--radius-comfortable);
+}
+
+.claude-btn--dark:hover {
+  background-color: var(--color-near-black);
+}
+
+/* 幽灵按钮 */
+.claude-btn--ghost {
+  background-color: transparent;
+  color: var(--color-near-black);
+  padding: var(--space-base) var(--space-base);
+}
+
+.claude-btn--ghost:hover {
+  background-color: var(--color-warm-sand);
+}
+
+/* 按钮尺寸变体 */
+.claude-btn--sm {
+  padding: var(--space-sm) var(--space-xl);
+  font-size: var(--text-body-sm);
+}
+
+.claude-btn--lg {
+  padding: var(--space-lg) var(--space-3xl);
+  font-size: var(--text-body-lg);
+}
+
+/* ===== 表单元素 ===== */
+
+.claude-input {
+  width: 100%;
+  padding: 1.6px var(--space-xl);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--color-near-black);
+  background-color: var(--color-ivory);
+  border: 1px solid var(--color-border-cream);
+  border-radius: var(--radius-generous);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.claude-input:focus {
+  outline: none;
+  border-color: var(--color-focus-blue);
+  box-shadow: 0 0 0 3px rgba(56, 152, 236, 0.1);
+}
+
+.claude-input::placeholder {
+  color: var(--color-stone-gray);
+}
+
+.claude-textarea {
+  composes: claude-input;
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ===== 工具类 ===== */
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mt-1 { margin-top: var(--space-base); }
+.mt-2 { margin-top: var(--space-2xl); }
+.mt-3 { margin-top: var(--space-4xl); }
+.mt-4 { margin-top: var(--space-5xl); }
+
+.mb-1 { margin-bottom: var(--space-base); }
+.mb-2 { margin-bottom: var(--space-2xl); }
+.mb-3 { margin-bottom: var(--space-4xl); }
+.mb-4 { margin-bottom: var(--space-5xl); }
+
+.p-1 { padding: var(--space-base); }
+.p-2 { padding: var(--space-2xl); }
+.p-3 { padding: var(--space-4xl); }
+.p-4 { padding: var(--space-5xl); }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: var(--space-base); }
+.gap-2 { gap: var(--space-2xl); }
+.gap-3 { gap: var(--space-4xl); }
+
+.hidden { display: none; }
+.block { display: block; }
+.inline-block { display: inline-block; }
