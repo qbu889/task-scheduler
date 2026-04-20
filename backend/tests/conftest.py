@@ -4,9 +4,23 @@ pytest配置文件
 import pytest
 import sys
 import os
+import atexit
 
 # 添加backend目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+@pytest.fixture(autouse=True)
+def cleanup_atexit():
+    """自动清理atexit注册的函数，避免测试退出时的日志错误"""
+    # 记录当前的atexit函数
+    original_callbacks = atexit._exithandlers[:] if hasattr(atexit, '_exithandlers') else []
+    
+    yield
+    
+    # 清除atexit注册的函数（仅用于测试）
+    if hasattr(atexit, '_exithandlers'):
+        atexit._exithandlers.clear()
 
 
 @pytest.fixture

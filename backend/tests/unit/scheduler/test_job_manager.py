@@ -11,21 +11,32 @@ class TestJobManager:
     def setup_method(self):
         """每个测试方法执行前的设置"""
         from app.scheduler.job_manager import JobManager
-        self.manager = JobManager()
+        # 不创建真实实例，避免启动调度器
+        self.manager = object.__new__(JobManager)
+        self.manager.scheduler = Mock()
+        self.manager.app = None
     
     @patch('app.scheduler.job_manager.BackgroundScheduler')
     @patch('app.scheduler.job_manager.atexit')
     def test_init_app(self, mock_atexit, mock_scheduler_class):
         """测试初始化应用"""
+        from app.scheduler.job_manager import JobManager
+        
+        # 设置mock scheduler
         mock_scheduler = Mock()
         mock_scheduler_class.return_value = mock_scheduler
         
+        # 创建新实例并设置scheduler
+        manager = object.__new__(JobManager)
+        manager.scheduler = mock_scheduler
+        manager.app = None
+        
         mock_app = Mock()
         
-        with patch.object(self.manager, 'load_all_tasks') as mock_load:
-            self.manager.init_app(mock_app)
+        with patch.object(manager, 'load_all_tasks') as mock_load:
+            manager.init_app(mock_app)
             
-            assert self.manager.app == mock_app
+            assert manager.app == mock_app
             mock_scheduler.start.assert_called_once()
             mock_load.assert_called_once()
             mock_atexit.register.assert_called_once()
@@ -42,12 +53,12 @@ class TestJobManager:
         # Mock tasks
         mock_task1 = Mock()
         mock_task1.task_id = 1
-        mock_task1.cron_expression = '0 0 2 * * *'
+        mock_task1.cron_expression = '0 2 * * *'
         mock_task1.task_name = '任务1'
         
         mock_task2 = Mock()
         mock_task2.task_id = 2
-        mock_task2.cron_expression = '0 0 3 * * *'
+        mock_task2.cron_expression = '0 3 * * *'
         mock_task2.task_name = '任务2'
         
         mock_task_class.query.filter_by.return_value.all.return_value = [mock_task1, mock_task2]
@@ -56,8 +67,8 @@ class TestJobManager:
             self.manager.load_all_tasks()
             
             assert mock_add_job.call_count == 2
-            mock_add_job.assert_any_call(1, '0 0 2 * * *', '任务1')
-            mock_add_job.assert_any_call(2, '0 0 3 * * *', '任务2')
+            mock_add_job.assert_any_call(1, '0 2 * * *', '任务1')
+            mock_add_job.assert_any_call(2, '0 3 * * *', '任务2')
     
     @patch('app.scheduler.job_manager.SqlExportTask')
     def test_load_all_tasks_empty(self, mock_task_class):
@@ -95,7 +106,8 @@ class TestJobManager:
         mock_scheduler.get_job.return_value = None
         self.manager.scheduler = mock_scheduler
         
-        self.manager.add_job(1, '0 0 2 * * *', '测试任务')
+        # 使用正确的5字段cron表达式
+        self.manager.add_job(1, '0 2 * * *', '测试任务')
         
         mock_scheduler.add_job.assert_called_once()
         call_args = mock_scheduler.add_job.call_args
@@ -109,7 +121,8 @@ class TestJobManager:
         mock_scheduler.get_job.return_value = existing_job
         self.manager.scheduler = mock_scheduler
         
-        self.manager.add_job(1, '0 0 3 * * *', '更新的任务')
+        # 使用正确的5字段cron表达式
+        self.manager.add_job(1, '0 3 * * *', '更新的任务')
         
         mock_scheduler.remove_job.assert_called_once_with('sql_export_1')
         mock_scheduler.add_job.assert_called_once()
@@ -148,10 +161,11 @@ class TestJobManager:
         """测试更新任务"""
         with patch.object(self.manager, 'remove_job') as mock_remove:
             with patch.object(self.manager, 'add_job') as mock_add:
-                self.manager.update_job(1, '0 0 4 * * *')
+                # 使用正确的5字段cron表达式
+                self.manager.update_job(1, '0 4 * * *')
                 
                 mock_remove.assert_called_once_with(1)
-                mock_add.assert_called_once_with(1, '0 0 4 * * *')
+                mock_add.assert_called_once_with(1, '0 4 * * *')
     
     @patch('app.scheduler.job_manager.sql_export_service')
     def test_execute_export_task_success(self, mock_service):
