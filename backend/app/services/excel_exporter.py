@@ -45,10 +45,10 @@ def export_to_excel(df, filepath, filename_prefix, max_rows_per_file=50000):
         df (pd.DataFrame): 要导出的数据
         filepath (str): 导出目录路径
         filename_prefix (str): 文件名前缀
-        max_rows_per_file (int): 单个文件最大行数，超过则分片
+        max_rows_per_file (int): 单个文件最大行数（仅用于日志记录，不再分片）
         
     Returns:
-        list: 生成的文件路径列表
+        list: 生成的文件路径列表（始终只返回一个文件）
     """
     import time
     start_time = time.time()
@@ -67,49 +67,17 @@ def export_to_excel(df, filepath, filename_prefix, max_rows_per_file=50000):
     
     logger.info(f"Starting Excel export: {total_rows} rows, prefix={filename_prefix}")
     
-    # 判断是否需要分片
-    if total_rows <= max_rows_per_file:
-        # 不需要分片
-        filename = f"{filename_prefix}_{timestamp}.xlsx"
-        full_path = os.path.join(filepath, filename)
-        
-        logger.info(f"Creating single Excel file: {full_path}")
-        _write_excel(formatted_df, full_path)
-        
-        duration = time.time() - start_time
-        file_size = get_file_size(full_path)
-        logger.info(f"Excel file created successfully: {full_path}, size={file_size} bytes, duration={duration:.2f}s")
-        return [full_path]
+    # 始终导出为单个文件
+    filename = f"{filename_prefix}_{timestamp}.xlsx"
+    full_path = os.path.join(filepath, filename)
     
-    else:
-        # 需要分片
-        file_paths = []
-        num_parts = (total_rows + max_rows_per_file - 1) // max_rows_per_file
-        
-        logger.info(f"Splitting data into {num_parts} parts (max {max_rows_per_file} rows per file)")
-        
-        for i in range(num_parts):
-            part_start = time.time()
-            start_idx = i * max_rows_per_file
-            end_idx = min((i + 1) * max_rows_per_file, total_rows)
-            
-            part_df = formatted_df.iloc[start_idx:end_idx]
-            
-            filename = f"{filename_prefix}_{timestamp}_part{i+1}.xlsx"
-            full_path = os.path.join(filepath, filename)
-            
-            logger.debug(f"Writing part {i+1}/{num_parts}: rows {start_idx}-{end_idx}")
-            _write_excel(part_df, full_path)
-            file_paths.append(full_path)
-            
-            part_duration = time.time() - part_start
-            logger.info(f"Part {i+1}/{num_parts} created: {full_path}, duration={part_duration:.2f}s")
-        
-        total_duration = time.time() - start_time
-        total_size = sum(get_file_size(fp) for fp in file_paths)
-        logger.info(f"All parts exported: {len(file_paths)} files, total_size={total_size} bytes, duration={total_duration:.2f}s")
-        
-        return file_paths
+    logger.info(f"Creating single Excel file: {full_path} ({total_rows} rows)")
+    _write_excel(formatted_df, full_path)
+    
+    duration = time.time() - start_time
+    file_size = get_file_size(full_path)
+    logger.info(f"Excel file created successfully: {full_path}, size={file_size} bytes, duration={duration:.2f}s")
+    return [full_path]
 
 
 def _write_excel(df, filepath):

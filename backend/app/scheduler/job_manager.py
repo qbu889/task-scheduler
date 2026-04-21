@@ -5,7 +5,9 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.services.sql_export_service import sql_export_service
+from app.services.file_cleanup_service import file_cleanup_service
 from app.models.sql_export_task import SqlExportTask
+from app import db
 import logging
 import atexit
 
@@ -33,6 +35,9 @@ class JobManager:
         
         # 加载所有已启用的任务
         self.load_all_tasks()
+        
+        # 添加定时清理任务（每天凌晨3点执行）
+        self.add_cleanup_job()
         
         # 应用退出时关闭调度器
         atexit.register(lambda: self.shutdown())
@@ -121,9 +126,71 @@ class JobManager:
         self.remove_job(task_id)
         self.add_job(task_id, cron_expression)
     
+    def add_cleanup_job(self):
+        """
+        添加定时清理过期导出文件的任务
+        默认每天凌晨3点执行，清理7天前的文件
+        """
+        try:
+            job_id = "file_cleanup"
+            
+            # 如果任务已存在，先移除
+            if self.scheduler.get_job(job_id):
+                logger.debug(f"Removing existing cleanup job: {job_id}")
+                self.scheduler.remove_job(job_id)
+            
+            # 每天凌晨3点执行
+            trigger = CronTrigger.from_crontab("0 3 * * *")
+            
+            # 添加清理任务
+            self.scheduler.add_job(
+                func=self._execute_cleanup_task,
+                trigger=trigger,
+                id=job_id,
+                replace_existing=True,
+                name="File Cleanup: Remove exports older than 7 days"
+            )
+            
+            logger.info(f"Cleanup job added: job_id={job_id}, cron=0 3 * * * (daily at 3:00 AM)")
+            
+        except Exception as e:
+            logger.error(f"Failed to add cleanup job: {str(e)}", exc_info=True)
+    
+    def _execute_cleanup_task(self):
+        """
+        执行文件清理任务（调度器回调）
+        """
+        import time
+        start_time = time.time()
+        
+        with self.app.app_context():
+            try:
+                logger.info("Starting scheduled file cleanup task")
+                
+                # 执行清理
+                stats = file_cleanup_service.clean_old_files()
+                
+                duration = time.time() - start_time
+                logger.info(f"File cleanup completed: "
+                          f"scanned={stats['total_scanned']}, "
+                          f"deleted={stats['total_deleted']}, "
+                          f"freed={stats['total_size_freed'] / 1024:.2f} KB, "
+                          f"duration={duration:.2f}s")
+                
+                # 如果有错误，记录警告
+                if stats['errors']:
+                    logger.warning(f"Cleanup task encountered {len(stats['errors'])} errors")
+                    for error in stats['errors']:
+                        logger.warning(f"  - {error}")
+                
+            except Exception as e:
+                duration = time.time() - start_time
+                logger.error(f"File cleanup task failed: duration={duration:.2f}s, error={str(e)}", 
+                           exc_info=True)
+    
     def _execute_export_task(self, task_id):
         """
-        执行导出任务（调度器回调）
+        执行SQL导出任务（调度器回调）
         
         Args:
             task_id (int): 任务ID

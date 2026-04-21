@@ -18,3 +18,7 @@ class TestingConfig:
     
     # 日志级别
     LOG_LEVEL = 'DEBUG'
+    
+    # 文件清理配置
+    EXPORT_DEFAULT_PATH = './test_exports/'
+    FILE_CLEANUP_RETENTION_DAYS = 7

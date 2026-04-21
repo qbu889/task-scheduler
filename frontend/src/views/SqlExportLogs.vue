@@ -11,7 +11,8 @@
           <el-input v-model="searchForm.task_id" placeholder="请输入任务ID" clearable />
         </el-form-item>
         <el-form-item label="执行状态">
-          <el-select v-model="searchForm.status" placeholder="请选择" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择" clearable style="width: 150px;">
+            <el-option label="处理中" value="running" />
             <el-option label="成功" value="success" />
             <el-option label="失败" value="failed" />
           </el-select>
@@ -30,8 +31,8 @@
         <el-table-column prop="end_time" label="结束时间" width="180" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'success' ? 'success' : 'danger'">
-              {{ row.status === 'success' ? '成功' : '失败' }}
+            <el-tag :type="row.status === 'success' ? 'success' : row.status === 'running' ? 'warning' : 'danger'">
+              {{ row.status === 'success' ? '成功' : row.status === 'running' ? '处理中' : '失败' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -80,8 +81,8 @@
         <el-descriptions-item label="开始时间">{{ currentLog.start_time }}</el-descriptions-item>
         <el-descriptions-item label="结束时间">{{ currentLog.end_time || '-' }}</el-descriptions-item>
         <el-descriptions-item label="执行状态">
-          <el-tag :type="currentLog.status === 'success' ? 'success' : 'danger'">
-            {{ currentLog.status === 'success' ? '成功' : '失败' }}
+          <el-tag :type="currentLog.status === 'success' ? 'success' : currentLog.status === 'running' ? 'warning' : 'danger'">
+            {{ currentLog.status === 'success' ? '成功' : currentLog.status === 'running' ? '处理中' : '失败' }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="记录数">{{ currentLog.record_count }}</el-descriptions-item>

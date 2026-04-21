@@ -19,6 +19,9 @@ class BaseConfig:
     EXPORT_DEFAULT_PATH = os.getenv('EXPORT_DEFAULT_PATH', './exports/')
     EXPORT_MAX_ROWS_PER_FILE = 50000
     
+    # 文件清理配置
+    FILE_CLEANUP_RETENTION_DAYS = int(os.getenv('FILE_CLEANUP_RETENTION_DAYS', '7'))  # 默认保留7天
+    
     # 邮件配置
     MAIL_SERVER = 'smtp.qq.com'
     MAIL_PORT = 465

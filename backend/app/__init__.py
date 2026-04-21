@@ -106,7 +106,10 @@ def create_app(config_class=None):
 def register_blueprints(app):
     """注册API蓝图"""
     from app.api.sql_export import sql_export_bp
+    from app.api.cleanup import cleanup_bp
+    
     app.register_blueprint(sql_export_bp, url_prefix='/api/sql-export')
+    app.register_blueprint(cleanup_bp, url_prefix='/api/cleanup')
 
 
 def init_scheduler(app):
