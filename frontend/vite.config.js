@@ -11,6 +11,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    allowedHosts: ['tasks.nokiafz.asia'],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5001',  // 后端API地址
