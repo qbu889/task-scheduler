@@ -251,16 +251,33 @@ class SqlExportService:
                 time_params = calculate_all_time_params(time_params_config)
                 logger.debug(f"Calculated time params: {time_params}")
             
-            # 执行SQL查询
+            # 执行SQL查询（使用分页查询提升性能）
             logger.info(f"Executing SQL query for task {task_id}")
             query_start = time.time()
             
-            df, record_count, final_sql = execute_sql(
-                datasource_config=datasource_config,
-                sql_template=task.sql_template,
-                time_params=time_params,
-                batch_size=task.batch_size
-            )
+            # 替换SQL占位符，生成最终SQL（用于日志记录）
+            from app.services.sql_executor import replace_sql_placeholders
+            final_sql = replace_sql_placeholders(task.sql_template, time_params)
+            
+            # 根据任务配置选择查询方式
+            if task.max_rows and task.max_rows > 0:
+                # 使用分页查询，适合大数据量
+                from app.services.sql_executor import execute_sql_paginated
+                df, record_count = execute_sql_paginated(
+                    datasource_config=datasource_config,
+                    sql_template=task.sql_template,
+                    time_params=time_params,
+                    batch_size=task.batch_size,
+                    max_rows=task.max_rows
+                )
+            else:
+                # 使用普通查询，适合小数据量
+                df, record_count, _ = execute_sql(
+                    datasource_config=datasource_config,
+                    sql_template=task.sql_template,
+                    time_params=time_params,
+                    batch_size=task.batch_size
+                )
             
             query_duration = time.time() - query_start
             logger.info(f"SQL query completed: {record_count} rows fetched in {query_duration:.2f}s")

@@ -48,10 +48,18 @@ def _create_engine_from_config(datasource_config):
     
     engine = create_engine(
         connection_url,
-        pool_size=5,
+        pool_size=10,  # 增加连接池大小
+        max_overflow=20,  # 允许额外连接数
         pool_recycle=3600,
         pool_pre_ping=True,
-        connect_args={'connect_timeout': 30}
+        connect_args={
+            'connect_timeout': 60,  # 连接超时60秒
+            'read_timeout': 300,  # 读取超时300秒（5分钟）
+            'write_timeout': 300  # 写入超时300秒
+        },
+        execution_options={
+            'stream_results': True  # 启用流式结果，减少内存占用
+        }
     )
     
     return engine
@@ -80,7 +88,7 @@ def replace_sql_placeholders(sql_template, time_params):
     return result_sql
 
 
-def execute_sql(datasource_config, sql_template, time_params=None, batch_size=5000):
+def execute_sql(datasource_config, sql_template, time_params=None, batch_size=10000):
     """
     执行SQL查询并返回DataFrame
     
@@ -88,7 +96,7 @@ def execute_sql(datasource_config, sql_template, time_params=None, batch_size=50
         datasource_config (dict): 数据源配置
         sql_template (str): SQL模板
         time_params (dict): 时间参数（用于替换占位符）
-        batch_size (int): 分页大小
+        batch_size (int): 分页大小（默认增加到10000）
         
     Returns:
         tuple: (DataFrame, total_rows, final_sql)
@@ -110,7 +118,19 @@ def execute_sql(datasource_config, sql_template, time_params=None, batch_size=50
         
         # 执行查询（使用pandas直接读取）
         logger.debug("Executing query via pandas")
-        df = pd.read_sql_query(final_sql, engine)
+        
+        # 对于大数据量，使用chunksize分块读取
+        if batch_size and batch_size > 0:
+            chunks = pd.read_sql_query(final_sql, engine, chunksize=batch_size)
+            df_list = []
+            for chunk in chunks:
+                df_list.append(chunk)
+            if df_list:
+                df = pd.concat(df_list, ignore_index=True)
+            else:
+                df = pd.DataFrame()
+        else:
+            df = pd.read_sql_query(final_sql, engine)
         
         total_rows = len(df)
         logger.info(f"Query completed successfully: {total_rows} rows fetched")
@@ -126,7 +146,7 @@ def execute_sql(datasource_config, sql_template, time_params=None, batch_size=50
             engine.dispose()
 
 
-def execute_sql_paginated(datasource_config, sql_template, time_params=None, batch_size=5000, max_rows=100000):
+def execute_sql_paginated(datasource_config, sql_template, time_params=None, batch_size=10000, max_rows=100000):
     """
     分页执行SQL查询（适用于大数据量）
     
@@ -134,7 +154,7 @@ def execute_sql_paginated(datasource_config, sql_template, time_params=None, bat
         datasource_config (dict): 数据源配置
         sql_template (str): SQL模板（不应包含LIMIT/OFFSET）
         time_params (dict): 时间参数
-        batch_size (int): 每页大小
+        batch_size (int): 每页大小（默认增加到10000）
         max_rows (int): 最大记录数限制
         
     Returns:

@@ -160,9 +160,87 @@ def get_dm_connection():
   - 常量：`UPPER_SNAKE_CASE`（例：`MAX_RETRY_COUNT`）
   - Vue组件：`PascalCase`（例：`TaskCard.vue`）
 
-### 3.2 UI设计规范
+### 3.2 接口返回数据规范
 
-#### 3.2.1 设计风格定位
+#### 3.2.1 JSON响应中文处理
+
+**核心原则**：所有API接口返回的JSON数据，中文字符必须原样输出，禁止使用Unicode转义（如`\u5173\u7cfb\u67e5\u8be2`）。
+
+**Flask配置要求**：
+```python
+# backend/app/__init__.py
+def create_app(config_class=None):
+    app = Flask(__name__)
+    
+    # 配置JSON序列化：确保中文原样输出，不使用Unicode转义
+    app.json.ensure_ascii = False
+    
+    # ...其他配置
+```
+
+**禁止行为**：
+- ❌ 不要在JSON序列化时使用`ensure_ascii=True`
+- ❌ 不要手动对中文进行Unicode编码
+- ❌ 不要在数据库查询或处理中对中文字段进行额外转义
+
+**正确示例**：
+```json
+// ✅ 正确的响应
+{
+  "task_name": "关系查询",
+  "filename_prefix": "泉州工单",
+  "sql_template": "SELECT * FROM 工单表"
+}
+
+// ❌ 错误的响应
+{
+  "task_name": "\u5173\u7cfb\u67e5\u8be2",
+  "filename_prefix": "\u6cc9\u5dde\u5de5\u5355",
+  "sql_template": "SELECT * FROM \u5de5\u5355\u8868"
+}
+```
+
+#### 3.2.2 中文字段处理
+
+**需要正确处理的字段**：
+- `task_name`（任务名称）
+- `filename_prefix`（文件名前缀）
+- `sql_template`（SQL模板）
+- `description`（任务描述）
+- `remark`（备注）
+- 所有其他包含中文的业务字段
+
+**数据库层面**：
+- 数据库字符集：`utf8mb4`
+- 排序规则：`utf8mb4_unicode_ci`
+- 连接字符串必须包含：`?charset=utf8mb4`
+
+**代码层面**：
+```python
+# ✅ 正确处理中文字段
+task = SqlExportTask(
+    task_name='关系查询',        # 直接使用中文字符串
+    filename_prefix='泉州工单',  # 不需要额外处理
+    sql_template='SELECT * FROM 工单表'  # SQL模板中的中文直接使用
+)
+```
+
+#### 3.2.3 文件下载中的中文文件名
+
+**Content-Disposition头处理**：
+```python
+from urllib.parse import quote
+
+# 正确处理中文文件名
+filename = '泉州工单_20260421.xlsx'
+# 使用RFC 5987编码格式，兼容各种浏览器
+encoded_filename = quote(filename.encode('utf-8'))
+response.headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+```
+
+### 3.3 UI设计规范
+
+#### 3.3.1 设计风格定位
 
 本项目前端界面严格遵循 **Claude (Anthropic) 设计风格**，核心理念是「温暖的文学沙龙」而非「冷峻的科技产品」。设计语言强调人文温度、编辑级排版和有机视觉元素。
 
@@ -176,7 +254,7 @@ def get_dm_connection():
 
 详细设计规范参见：[doc/通用文档/ClaudeDESIGN.md](通用文档/ClaudeDESIGN.md)
 
-#### 3.2.2 色彩系统
+#### 3.3.2 色彩系统
 
 **主色调**：
 - 页面背景（Parchment）：`#f5f4ed` — 暖奶油色，情感基础
@@ -196,7 +274,7 @@ def get_dm_connection():
 - ❌ 纯白色（`#ffffff`）作为页面背景
 - ❌ 饱和度过高的颜色（除赤陶色外保持 muted）
 
-#### 3.2.3 字体层级
+#### 3.3.3 字体层级
 
 **字体家族**：
 - 标题：`Georgia, 'Times New Roman', serif`（Anthropic Serif 替代品）
@@ -219,7 +297,7 @@ def get_dm_connection():
 - 正文字高1.60，显著宽松于典型科技网站（1.4-1.5），接近书籍阅读体验
 - 标题行高1.10-1.30，紧凑但不拥挤
 
-#### 3.2.4 组件样式
+#### 3.3.4 组件样式
 
 **按钮**：
 ```css
@@ -281,7 +359,7 @@ def get_dm_connection():
 }
 ```
 
-#### 3.2.5 布局原则
+#### 3.3.5 布局原则
 
 **间距系统**：
 - 基础单位：8px
@@ -303,7 +381,7 @@ def get_dm_connection():
 
 **核心理念**：通过暖色调环状阴影而非传统投影传达深度，`0px 0px 0px 1px` 模式创造类似边框的光晕效果。
 
-#### 3.2.6 响应式行为
+#### 3.3.6 响应式行为
 
 **断点**：
 | 名称 | 宽度 | 关键变化 |
@@ -319,7 +397,7 @@ def get_dm_connection():
 - 导航：完整横向 → 汉堡菜单
 - 区块padding：成比例减少但保持编辑级节奏
 
-#### 3.2.7 Do's and Don'ts
+#### 3.3.7 Do's and Don'ts
 
 **必须做**：
 - ✅ 使用 Parchment (`#f5f4ed`) 作为主要浅色背景
@@ -341,7 +419,7 @@ def get_dm_connection():
 - ❌ 使用几何/科技风格插图 — 插图应有机且手绘感
 - ❌ 将正文字高降至1.40以下 — generous 间距支持编辑级个性
 
-### 3.3 注释与文档
+### 3.4 注释与文档
 
 | 类型 | 要求 |
 |------|------|
@@ -351,9 +429,9 @@ def get_dm_connection():
 | **API注释** | 使用 `@bp.route` 装饰器，配合 OpenAPI/Swagger 自动生成文档 |
 | **前端组件** | 每个 `.vue` 文件顶部说明组件用途 |
 
-### 3.4 日志规范
+### 3.5 日志规范
 
-#### 3.4.1 日志配置要求
+#### 3.5.1 日志配置要求
 
 **核心原则**：日志系统必须可配置、分级输出、便于问题排查和性能分析。
 
@@ -394,7 +472,7 @@ class BaseConfig:
 | 测试环境 | INFO | 控制台 + 文件 | 是 |
 | 生产环境 | WARNING | 文件 + 外部日志系统 | 是 |
 
-#### 3.4.2 新功能日志添加要求
+#### 3.5.2 新功能日志添加要求
 
 **强制要求**：每个新功能或需求必须在以下关键节点添加日志输出：
 
@@ -424,7 +502,7 @@ class BaseConfig:
    - 大数据量处理记录进度（每N条记录输出一次）
    - 示例：`logger.debug(f"Processing batch {batch_num}/{total_batches}")`
 
-#### 3.4.3 日志内容规范
+#### 3.5.3 日志内容规范
 
 **必须包含的信息**：
 - 操作对象标识（任务ID、用户ID等）
@@ -452,7 +530,7 @@ logger.info("Task created")  # 缺少关键信息
 logger.error("Error occurred")  # 缺少上下文
 ```
 
-#### 3.4.4 日志最佳实践
+#### 3.5.4 日志最佳实践
 
 1. **使用结构化日志**：
    ```python
@@ -496,9 +574,9 @@ logger.error("Error occurred")  # 缺少上下文
    logger.debug(f"Detailed data: {expensive_operation()}")
    ```
 
-### 3.5 文档文件管理规范
+### 3.6 文档文件管理规范
 
-#### 3.5.1 Markdown文件存放规则
+#### 3.6.1 Markdown文件存放规则
 
 **核心原则**：所有生成的 `.md` 格式文档必须存放在 `doc/` 目录下，并根据文档类型进行合理组织。
 
@@ -553,7 +631,7 @@ doc/通用文档/RESPONSIVE_DESIGN.md
 doc/my_new_docs/GUIDE.md  # 应该先确认是否有合适目录可用
 ```
 
-#### 3.5.2 文档命名规范
+#### 3.6.2 文档命名规范
 
 - **使用英文或拼音**：避免中文文件名可能导致的跨平台兼容性问题
 - **使用大写下划线**：`DOCUMENT_NAME.md` 而非 `document-name.md`
@@ -570,7 +648,7 @@ doc/my_new_docs/GUIDE.md  # 应该先确认是否有合适目录可用
 - ❌ `api-ref.md`（过度缩写）
 - ❌ `doc1.md`（语义不清）
 
-### 3.6 Git 提交规范
+### 3.7 Git 提交规范
 
 ```
 <type>(<scope>): <subject>
@@ -586,7 +664,7 @@ doc/my_new_docs/GUIDE.md  # 应该先确认是否有合适目录可用
 
 **提交频率**：每个功能点/修复单独提交，禁止大杂烩提交。
 
-### 3.7 分支策略
+### 3.8 分支策略
 
 ```
 main
@@ -602,7 +680,7 @@ main
 - `bugfix/*`：缺陷修复分支
 - `release/*`：发布准备分支
 
-### 3.8 环境隔离
+### 3.9 环境隔离
 
 #### 后端配置（Flask）
 
@@ -1342,6 +1420,7 @@ def test_get_status_active():
 | v1.3 | 2026-04-20 | 大幅提升测试覆盖率（26%→67%），新增服务层、API层、调度器单元测试；补充测试报告规范，包括生成命令、内容要求、CI集成、邮件模板等 | AI Agent |
 | v1.4 | 2026-04-20 | 强化测试覆盖率要求：明确变更代码需同步更新测试、主流程覆盖率≥85%、提交前必须运行测试、CI自动检查；新增8.5.7节详细说明代码变更时的测试更新要求和示例 | AI Agent |
 | v1.5 | 2026-04-20 | 新增日志规范要求（3.4节）：定义日志配置、分级输出、新功能日志添加强制要求、敏感信息处理规范；为所有后端代码添加完善的日志系统 | AI Agent |
+| v1.6 | 2026-04-21 | 新增接口返回数据规范（3.2节）：明确JSON响应中文字符处理标准，禁止Unicode转义；配置Flask `app.json.ensure_ascii = False`；规范中文字段处理和文件下载中的中文文件名 | AI Agent |
 
 ---
 

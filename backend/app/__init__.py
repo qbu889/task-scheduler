@@ -74,6 +74,9 @@ def create_app(config_class=None):
     """
     app = Flask(__name__)
     
+    # 配置JSON序列化：确保中文原样输出，不使用Unicode转义
+    app.json.ensure_ascii = False
+    
     # 加载配置
     if config_class is None:
         from config import Config as AppConfig
@@ -106,7 +109,10 @@ def create_app(config_class=None):
 def register_blueprints(app):
     """注册API蓝图"""
     from app.api.sql_export import sql_export_bp
+    from app.api.cleanup import cleanup_bp
+    
     app.register_blueprint(sql_export_bp, url_prefix='/api/sql-export')
+    app.register_blueprint(cleanup_bp, url_prefix='/api/cleanup')
 
 
 def init_scheduler(app):

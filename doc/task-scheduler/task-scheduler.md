@@ -20,6 +20,7 @@
 - **输出位置**：保存到服务器指定目录（可配置），文件名包含时间戳和任务名称。
 - **Web管理界面**：提供可视化界面进行SQL配置、数据源管理、任务调度、手动触发等操作，**采用Claude Design设计规范**。
 - **可追溯**：每次执行记录日志（成功/失败、记录数、耗时），支持通过CI报告推送结果至QQ邮箱（524722511@qq.com）。
+- **自动清理**：定时清理过期导出文件（默认保留7天），**防止磁盘空间占用**，支持手动触发和预览清理报告。
 
 ---
 
@@ -241,6 +242,138 @@ WHERE A.CREATE_TIME BETWEEN '2025-01-01 00:00:00' AND '2026-04-19 23:59:59'
 示例：
 - `泉州遗留库工单_20260420_020000.xlsx`
 - 若分片：`泉州遗留库工单_20260420_020000_part1.xlsx`
+
+---
+
+### 4.5 过期文件自动清理
+
+系统提供定时清理功能，自动删除过期的导出文件，防止磁盘空间占用。
+
+#### （1）清理策略
+
+| 策略项 | 默认值 | 说明 |
+|--------|--------|------|
+| 保留天数 | 7天 | 文件创建时间超过保留天数的将被清理 |
+| 执行时间 | 每天凌晨3点 | Cron表达式：`0 3 * * *` |
+| 扫描范围 | 配置文件指定的导出路径 | 从 `config.py` 中的 `EXPORT_DEFAULT_PATH` 读取 |
+| 匹配规则 | 严格的文件名验证 | 避免误删非系统生成的文件 |
+
+#### （2）文件名匹配规则
+
+系统只会清理符合以下格式的文件：
+
+```regex
+^{prefix}_{YYYYMMDD_HHMMSS}(?:_part\d+)?\.xlsx$
+```
+
+**验证规则**：
+1. ✅ 必须以 `.xlsx` 结尾
+2. ✅ 必须包含 `8位日期_6位时间` 格式（如 `20260420_020000`）
+3. ✅ 可选包含 `_partN` 分片标记（如 `_part1`）
+4. ✅ 前缀不能为空
+
+**示例**：
+- ✅ `泉州遗留库工单_20260420_020000.xlsx` - 合法
+- ✅ `泉州遗留库工单_20260420_020000_part2.xlsx` - 合法（分片文件）
+- ❌ `important_data.xlsx` - 不合法（无时间戳）
+- ❌ `report_2026-04-20.xlsx` - 不合法（时间格式不对）
+- ❌ `backup.zip` - 不合法（非xlsx文件）
+
+#### （3）API接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/cleanup/files` | 手动触发文件清理 |
+| GET | `/api/cleanup/files/report` | 获取清理报告（预览，不实际删除） |
+| POST | `/api/cleanup/files/task/<task_id>` | 清理指定任务的过期文件 |
+
+**手动清理示例**：
+```bash
+# 清理所有过期文件（保留7天）
+POST /api/cleanup/files
+
+# 清理所有过期文件（保留30天）
+POST /api/cleanup/files?retention_days=30
+
+# 获取清理报告（预览）
+GET /api/cleanup/files/report
+
+# 清理指定任务的过期文件
+POST /api/cleanup/files/task/1?retention_days=7
+```
+
+**清理报告示例**：
+```json
+{
+  "success": true,
+  "data": {
+    "retention_days": 7,
+    "total_scanned": 150,
+    "files_to_delete_count": 45,
+    "total_size_to_free": 524288000,
+    "total_size_to_free_mb": 500.0,
+    "files_to_delete": [
+      {
+        "file_path": "D:/exports/泉州遗留库工单_20260413_020000.xlsx",
+        "filename": "泉州遗留库工单_20260413_020000.xlsx",
+        "file_size": 10485760,
+        "file_age_days": 7,
+        "timestamp": "2026-04-13T02:00:00"
+      }
+    ]
+  }
+}
+```
+
+#### （4）配置方式
+
+在 `config.py` 中可自定义导出路径和保留天数：
+
+```python
+class BaseConfig:
+    # 导出路径配置（支持多个路径，用逗号分隔）
+    EXPORT_DEFAULT_PATH = './exports/'  # 单个路径
+    # 或
+    EXPORT_DEFAULT_PATH = 'D:/exports/,E:/backup/exports/'  # 多个路径
+    
+    # 文件清理配置
+    FILE_CLEANUP_RETENTION_DAYS = 7  # 默认保留7天
+```
+
+或通过环境变量：
+
+```bash
+# 设置导出路径（支持多个路径）
+export EXPORT_DEFAULT_PATH="D:/exports/,E:/backup/exports/"
+
+# 设置保留天数
+export FILE_CLEANUP_RETENTION_DAYS=30  # 保留30天
+```
+
+**注意**：
+- 清理服务只会扫描配置文件中指定的路径
+- 如果配置了多个路径，会依次扫描每个路径
+- 不存在的目录会被跳过并记录警告日志
+
+#### （5）清理日志
+
+系统会记录详细的清理日志：
+
+```
+2026-04-21 03:00:00 - app.scheduler.job_manager - INFO - Starting scheduled file cleanup task
+2026-04-21 03:00:01 - app.services.file_cleanup_service - INFO - Scanning export path: D:/exports/
+2026-04-21 03:00:01 - app.services.file_cleanup_service - INFO - Deleted old file: 泉州遗留库工单_20260413_020000.xlsx (age: 8 days, size: 10240.00 KB)
+2026-04-21 03:00:02 - app.scheduler.job_manager - INFO - File cleanup completed: scanned=150, deleted=45, freed=500.00 KB, duration=1.23s
+```
+
+#### （6）安全机制
+
+1. **严格的文件名验证**：只清理符合格式的文件，避免误删
+2. **时间戳验证**：从文件名提取真实时间戳，计算准确的文件年龄
+3. **异常处理**：单个文件删除失败不影响其他文件，错误会被记录
+4. **预览功能**：提供清理报告API，可在实际删除前预览将要删除的文件
+5. **路径隔离**：只扫描配置文件中指定的导出路径，不会扫描其他目录
+6. **配置驱动**：清理路径由配置文件控制，而非动态读取数据库，更加安全可靠
 
 ---
 
@@ -518,6 +651,22 @@ GET /api/sql-export/tasks?page=1&page_size=10&is_enabled=1
 - 功能：
   - `encrypt(password)` 加密密码
   - `decrypt(encrypted_password)` 解密密码
+
+#### 7.1.9 文件清理服务
+- 文件：`backend/app/services/file_cleanup_service.py`
+- 功能：
+  - `clean_old_files(retention_days)` 清理所有任务的过期文件
+  - `cleanup_by_task_id(task_id, retention_days)` 清理指定任务的过期文件
+  - `get_cleanup_report(retention_days)` 获取清理报告（预览）
+  - `_is_valid_export_file(filename)` 验证文件名格式
+  - `_extract_timestamp(filename)` 从文件名提取时间戳
+
+#### 7.1.10 文件清理API
+- 文件：`backend/app/api/cleanup.py`
+- 功能：
+  - `POST /api/cleanup/files` 手动触发文件清理
+  - `GET /api/cleanup/files/report` 获取清理报告
+  - `POST /api/cleanup/files/task/<task_id>` 清理指定任务的文件
 
 ### 7.2 前端模块（Vue 3 + Element Plus）
 

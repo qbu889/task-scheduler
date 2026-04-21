@@ -442,7 +442,7 @@
           />
         </el-form-item>
         <el-form-item label="最大记录数">
-          <el-input-number v-model="taskForm.max_rows" :min="1000" :max="1000000" />
+          <el-input-number v-model="taskForm.max_rows" :min="1000" :max="5000000" />
         </el-form-item>
         <el-form-item label="分页大小">
           <el-input-number v-model="taskForm.batch_size" :min="1000" :max="10000" />
@@ -486,6 +486,9 @@ const submitting = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新建任务')
 const formRef = ref(null)
+
+// 用于取消上一次请求
+let abortController = null
 
 const searchForm = reactive({
   task_name: '',
@@ -756,6 +759,14 @@ const calculateNextTime = (fromTime, cron, offset = 0) => {
 
 // 加载任务列表
 const loadTasks = async () => {
+  // 取消上一次未完成的请求
+  if (abortController) {
+    abortController.abort()
+  }
+  
+  // 创建新的 AbortController
+  abortController = new AbortController()
+  
   loading.value = true
   try {
     const params = {
@@ -763,11 +774,14 @@ const loadTasks = async () => {
       page_size: pagination.page_size,
       ...searchForm
     }
-    const res = await getTasks(params)
+    const res = await getTasks(params, abortController.signal)
     taskList.value = res.data
     pagination.total = res.total
   } catch (error) {
-    console.error('加载任务列表失败:', error)
+    // 如果是请求被取消，忽略错误
+    if (error.name !== 'AbortError') {
+      console.error('加载任务列表失败:', error)
+    }
   } finally {
     loading.value = false
   }

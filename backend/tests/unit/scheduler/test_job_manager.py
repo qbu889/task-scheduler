@@ -220,3 +220,86 @@ class TestJobManager:
         self.manager.shutdown()
         
         mock_scheduler.shutdown.assert_not_called()
+    
+    def test_add_cleanup_job_new(self):
+        """测试添加新的清理任务"""
+        mock_scheduler = Mock()
+        mock_scheduler.get_job.return_value = None
+        self.manager.scheduler = mock_scheduler
+        
+        self.manager.add_cleanup_job()
+        
+        mock_scheduler.add_job.assert_called_once()
+        call_args = mock_scheduler.add_job.call_args
+        assert call_args[1]['id'] == 'file_cleanup'
+        assert 'File Cleanup' in call_args[1]['name']
+    
+    def test_add_cleanup_job_replace_existing(self):
+        """测试替换已存在的清理任务"""
+        mock_scheduler = Mock()
+        existing_job = Mock()
+        mock_scheduler.get_job.return_value = existing_job
+        self.manager.scheduler = mock_scheduler
+        
+        self.manager.add_cleanup_job()
+        
+        # 应该先移除旧任务，再添加新任务
+        mock_scheduler.remove_job.assert_called_once_with('file_cleanup')
+        mock_scheduler.add_job.assert_called_once()
+    
+    @patch('app.scheduler.job_manager.file_cleanup_service')
+    def test_execute_cleanup_task_success(self, mock_cleanup_service):
+        """测试执行清理任务成功"""
+        mock_app = Mock()
+        mock_context = Mock()
+        mock_app.app_context.return_value.__enter__ = Mock(return_value=mock_context)
+        mock_app.app_context.return_value.__exit__ = Mock(return_value=False)
+        self.manager.app = mock_app
+        
+        mock_cleanup_service.clean_old_files.return_value = {
+            'total_scanned': 100,
+            'total_deleted': 20,
+            'total_size_freed': 1024000,  # 1MB
+            'errors': []
+        }
+        
+        self.manager._execute_cleanup_task()
+        
+        mock_cleanup_service.clean_old_files.assert_called_once()
+    
+    @patch('app.scheduler.job_manager.file_cleanup_service')
+    def test_execute_cleanup_task_with_errors(self, mock_cleanup_service):
+        """测试执行清理任务有错误"""
+        mock_app = Mock()
+        mock_context = Mock()
+        mock_app.app_context.return_value.__enter__ = Mock(return_value=mock_context)
+        mock_app.app_context.return_value.__exit__ = Mock(return_value=False)
+        self.manager.app = mock_app
+        
+        mock_cleanup_service.clean_old_files.return_value = {
+            'total_scanned': 50,
+            'total_deleted': 5,
+            'total_size_freed': 512000,
+            'errors': ['Error deleting file1', 'Error deleting file2']
+        }
+        
+        # 应该捕获错误但不抛出异常
+        self.manager._execute_cleanup_task()
+        
+        mock_cleanup_service.clean_old_files.assert_called_once()
+    
+    @patch('app.scheduler.job_manager.file_cleanup_service')
+    def test_execute_cleanup_task_exception(self, mock_cleanup_service):
+        """测试执行清理任务异常"""
+        mock_app = Mock()
+        mock_context = Mock()
+        mock_app.app_context.return_value.__enter__ = Mock(return_value=mock_context)
+        mock_app.app_context.return_value.__exit__ = Mock(return_value=False)
+        self.manager.app = mock_app
+        
+        mock_cleanup_service.clean_old_files.side_effect = Exception("Cleanup failed")
+        
+        # 应该捕获异常而不抛出
+        self.manager._execute_cleanup_task()
+        
+        mock_cleanup_service.clean_old_files.assert_called_once()
