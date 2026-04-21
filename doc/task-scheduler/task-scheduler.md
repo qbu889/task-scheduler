@@ -14,11 +14,11 @@
 ### 1.2 核心目标
 - **SQL可配置**：通过Web界面配置完整的SQL查询语句，支持复杂的多表关联、CASE WHEN、子查询等。
 - **多数据源支持**：支持MySQL（开发环境）、达梦数据库（生产环境）等多种数据源，可在配置中指定。
-- **动态时间参数**：支持在SQL中使用占位符（如 `:start_time`、`:end_time`），系统自动计算并替换为实际时间值。
-- **定时触发**：支持 Cron 表达式配置，自动执行查询任务。
+- **动态时间参数**：支持在SQL中使用占位符（如 `:start_time`、`:end_time`），系统自动计算并替换为实际时间值，**支持实时预览计算结果**。
+- **定时触发**：支持 Cron 表达式配置，**提供可视化Cron生成器**，自动执行查询任务。
 - **导出格式**：生成 Excel `.xlsx` 文件，保留SQL中的列别名作为表头。
 - **输出位置**：保存到服务器指定目录（可配置），文件名包含时间戳和任务名称。
-- **Web管理界面**：提供可视化界面进行SQL配置、数据源管理、任务调度、手动触发等操作。
+- **Web管理界面**：提供可视化界面进行SQL配置、数据源管理、任务调度、手动触发等操作，**采用Claude Design设计规范**。
 - **可追溯**：每次执行记录日志（成功/失败、记录数、耗时），支持通过CI报告推送结果至QQ邮箱（524722511@qq.com）。
 
 ---
@@ -57,7 +57,7 @@
 
 ### 2.3 时间参数配置规则
 
-支持两种时间参数类型：
+支持两种时间参数类型，**前端提供实时预览功能**：
 
 #### （1）固定时间（fixed）
 ```json
@@ -98,6 +98,11 @@
 }
 ```
 
+**前端实时预览**：
+- 配置时间参数后，立即显示计算出的实际时间
+- 修改偏移天数或时间时，预览自动更新
+- 便于用户确认配置是否正确
+
 ### 2.4 SQL模板占位符
 
 SQL中使用 `:param_name` 格式的占位符，系统会自动替换为计算后的时间值：
@@ -110,6 +115,30 @@ WHERE A.CREATE_TIME BETWEEN :start_time AND :end_time
 ```sql
 WHERE A.CREATE_TIME BETWEEN '2025-01-01 00:00:00' AND '2026-04-19 23:59:59'
 ```
+
+---
+
+### 2.5 Cron表达式配置
+
+**前端提供可视化Cron生成器**，支持以下预设模式：
+
+| 模式 | 说明 | 示例 | 生成结果 |
+|------|------|------|----------|
+| 每N分钟 | 每隔指定分钟执行 | 每2分钟 | `*/2 * * * *` |
+| 每小时 | 每小时的第N分钟 | 第30分钟 | `30 * * * *` |
+| 每天 | 每天指定时间 | 凌晨2点 | `0 2 * * *` |
+| 每周 | 每周几的指定时间 | 周一9点 | `0 9 * * 1` |
+| 每月 | 每月几号的指定时间 | 1号凌晨 | `0 0 1 * *` |
+| 自定义 | 手动输入Cron表达式 | - | 用户自定义 |
+
+**下次执行时间预览**：
+- 配置Cron表达式后，自动计算并显示未来3次执行时间
+- 便于用户确认调度计划是否符合预期
+
+**5字段格式说明**：`分 时 日 月 周`
+- `*/2 * * * *` - 每2分钟
+- `0 2 * * *` - 每天凌晨2点
+- `0 9 * * 1` - 每周一上午9点
 
 ---
 
@@ -337,12 +366,12 @@ class SqlExportLog(db.Model):
 | POST | `/api/sql-export/tasks/<task_id>/trigger` | 手动触发任务执行 |
 | GET | `/api/sql-export/logs` | 获取执行日志列表 |
 | GET | `/api/sql-export/logs/<log_id>` | 获取日志详情 |
+| GET | `/api/sql-export/logs/<log_id>/download` | 下载导出文件 |
 
 ### 6.3 数据源管理接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/sql-export/datasources` | 获取数据源列表 |
 | POST | `/api/sql-export/datasources/test` | 测试数据源连接 |
 
 ### 6.4 请求/响应示例
@@ -357,15 +386,16 @@ POST /api/sql-export/tasks
     "host": "192.168.1.100",
     "port": 5236,
     "user": "SYSDBA",
-    "password": "encrypted_password",
+    "password": "your_password",  // 前端明文传输，后端加密存储
     "database": "MONITORWO",
     "charset": "utf8"
   },
   "sql_template": "SELECT A.sheet_Id AS 工单流水号, A.title AS 工单主题 FROM MW_ORDER_WORK A WHERE A.CREATE_TIME BETWEEN :start_time AND :end_time",
   "time_params": {
     "start_time": {
-      "type": "fixed",
-      "value": "2025-01-01 00:00:00"
+      "type": "relative",
+      "offset_days": -7,
+      "time_of_day": "00:00:00"
     },
     "end_time": {
       "type": "relative",
@@ -373,7 +403,7 @@ POST /api/sql-export/tasks
       "time_of_day": "23:59:59"
     }
   },
-  "cron_expression": "0 0 2 * * *",
+  "cron_expression": "0 2 * * *",
   "export_path": "D:/exports/",
   "filename_prefix": "泉州遗留库工单",
   "max_rows": 100000,
@@ -382,6 +412,11 @@ POST /api/sql-export/tasks
   "description": "每日导出泉州地区遗留库工单数据"
 }
 ```
+
+**注意**：
+- `datasource_config.password` 前端以明文传输，后端使用 Fernet 加密后存储
+- `time_params` 支持 `fixed` 和 `relative` 两种类型
+- `cron_expression` 为 5 字段格式（分 时 日 月 周）
 
 #### 手动触发
 ```json
@@ -635,6 +670,7 @@ ORDER BY A.SEND_TIME DESC
 |------|------|---------|------|
 | v1.0 | 2026-04-20 | 初始版本（基于固定字段映射） | AI Agent |
 | v2.0 | 2026-04-20 | **重大重构**：改为通用SQL查询导出系统，支持可配置SQL、多数据源、动态时间参数、Web界面管理 | AI Agent |
+| v2.1 | 2026-04-21 | **前端功能增强**：<br>- 添加 Cron 表达式可视化生成器<br>- 添加时间参数实时预览<br>- 添加下次执行时间预览<br>- 采用 Claude Design 设计规范<br>- 修复 Flask debug 模式重复初始化问题<br>- 实现达梦驱动延迟加载机制<br>- 调整开发环境端口为 5001 | AI Agent |
 
 ---
 

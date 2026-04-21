@@ -791,10 +791,31 @@ const showCreateDialog = () => {
 // 显示编辑对话框
 const showEditDialog = (row) => {
   dialogTitle.value = '编辑任务'
+  
+  // 深拷贝避免引用问题
   Object.assign(taskForm, row)
   
+  // 解析JSON字符串为对象
+  if (typeof taskForm.datasource_config === 'string') {
+    taskForm.datasource_config = JSON.parse(taskForm.datasource_config)
+  }
+  
+  if (typeof taskForm.time_params === 'string') {
+    taskForm.time_params = JSON.parse(taskForm.time_params)
+  }
+  
+  // 初始化time_params的fixed_time字段
+  if (!taskForm.time_params.start_time.fixed_time) {
+    taskForm.time_params.start_time.fixed_time = ''
+  }
+  if (!taskForm.time_params.end_time.fixed_time) {
+    taskForm.time_params.end_time.fixed_time = ''
+  }
+  
   // 解析已有的Cron表达式
-  parseExistingCron(row.cron_expression)
+  if (row.cron_expression) {
+    parseExistingCron(row.cron_expression)
+  }
   
   dialogVisible.value = true
 }
@@ -835,6 +856,9 @@ const parseExistingCron = (cron) => {
     // 自定义
     cronConfig.frequency = 'custom'
   }
+  
+  // 计算下次执行时间
+  calculateNextRunTimes()
 }
 
 // 重置表单
