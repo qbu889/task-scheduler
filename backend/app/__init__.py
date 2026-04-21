@@ -111,5 +111,10 @@ def register_blueprints(app):
 
 def init_scheduler(app):
     """初始化定时任务调度器"""
-    from app.scheduler.job_manager import job_manager
-    job_manager.init_app(app)
+    # 在debug模式下，只在主进程中初始化调度器（避免reloader导致重复初始化）
+    import os
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+        from app.scheduler.job_manager import job_manager
+        job_manager.init_app(app)
+    else:
+        app.logger.debug("Skipping scheduler initialization in reloader process")
