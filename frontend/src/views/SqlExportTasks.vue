@@ -267,6 +267,10 @@
                     <span>时间：</span>
                     <el-time-picker v-model="taskForm.time_params.start_time.time_of_day" format="HH:mm:ss" value-format="HH:mm:ss" style="width: 120px;" />
                   </div>
+                  <div class="time-preview" style="margin-top: 8px; padding: 8px; background: #f5f7fa; border-radius: 4px;">
+                    <span class="preview-label" style="color: #909399; font-size: 12px;">实际时间：</span>
+                    <span class="preview-value" style="color: #409eff; font-weight: 500;">{{ computedStartTime }}</span>
+                  </div>
                 </template>
                 
                 <template v-if="taskForm.time_params.start_time.type === 'fixed'">
@@ -295,6 +299,10 @@
                     <span>时间：</span>
                     <el-time-picker v-model="taskForm.time_params.end_time.time_of_day" format="HH:mm:ss" value-format="HH:mm:ss" style="width: 120px;" />
                   </div>
+                  <div class="time-preview" style="margin-top: 8px; padding: 8px; background: #f5f7fa; border-radius: 4px;">
+                    <span class="preview-label" style="color: #909399; font-size: 12px;">实际时间：</span>
+                    <span class="preview-value" style="color: #409eff; font-weight: 500;">{{ computedEndTime }}</span>
+                  </div>
                 </template>
                 
                 <template v-if="taskForm.time_params.end_time.type === 'fixed'">
@@ -312,15 +320,111 @@
           </div>
         </el-form-item>
         <el-form-item label="Cron表达式" prop="cron_expression">
+          <!-- Cron生成器 -->
+          <div class="cron-builder" style="margin-bottom: 12px;">
+            <el-radio-group v-model="cronConfig.frequency" @change="generateCron" style="margin-bottom: 12px;">
+              <el-radio label="minute">每N分钟</el-radio>
+              <el-radio label="hourly">每小时</el-radio>
+              <el-radio label="daily">每天</el-radio>
+              <el-radio label="weekly">每周</el-radio>
+              <el-radio label="monthly">每月</el-radio>
+              <el-radio label="custom">自定义</el-radio>
+            </el-radio-group>
+            
+            <!-- 每N分钟 -->
+            <div v-if="cronConfig.frequency === 'minute'" style="display: flex; align-items: center; gap: 10px;">
+              <span>每</span>
+              <el-input-number v-model="cronConfig.minuteInterval" :min="1" :max="59" @change="generateCron" style="width: 100px;" />
+              <span>分钟执行一次</span>
+            </div>
+            
+            <!-- 每小时 -->
+            <div v-if="cronConfig.frequency === 'hourly'" style="display: flex; align-items: center; gap: 10px;">
+              <span>每小时的第</span>
+              <el-input-number v-model="cronConfig.minute" :min="0" :max="59" @change="generateCron" style="width: 100px;" />
+              <span>分钟执行</span>
+            </div>
+            
+            <!-- 每天 -->
+            <div v-if="cronConfig.frequency === 'daily'" style="display: flex; align-items: center; gap: 10px;">
+              <span>每天</span>
+              <el-time-picker 
+                v-model="cronConfig.dailyTime" 
+                format="HH:mm" 
+                value-format="HH:mm" 
+                @change="generateCron"
+                style="width: 120px;" 
+              />
+              <span>执行</span>
+            </div>
+            
+            <!-- 每周 -->
+            <div v-if="cronConfig.frequency === 'weekly'" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span>每周</span>
+              <el-select v-model="cronConfig.weekDay" @change="generateCron" style="width: 100px;">
+                <el-option label="周一" value="1" />
+                <el-option label="周二" value="2" />
+                <el-option label="周三" value="3" />
+                <el-option label="周四" value="4" />
+                <el-option label="周五" value="5" />
+                <el-option label="周六" value="6" />
+                <el-option label="周日" value="0" />
+              </el-select>
+              <el-time-picker 
+                v-model="cronConfig.dailyTime" 
+                format="HH:mm" 
+                value-format="HH:mm" 
+                @change="generateCron"
+                style="width: 120px;" 
+              />
+              <span>执行</span>
+            </div>
+            
+            <!-- 每月 -->
+            <div v-if="cronConfig.frequency === 'monthly'" style="display: flex; align-items: center; gap: 10px;">
+              <span>每月</span>
+              <el-input-number v-model="cronConfig.monthDay" :min="1" :max="28" @change="generateCron" style="width: 100px;" />
+              <span>日</span>
+              <el-time-picker 
+                v-model="cronConfig.dailyTime" 
+                format="HH:mm" 
+                value-format="HH:mm" 
+                @change="generateCron"
+                style="width: 120px;" 
+              />
+              <span>执行</span>
+            </div>
+            
+            <!-- 自定义提示 -->
+            <div v-if="cronConfig.frequency === 'custom'" style="color: #909399; font-size: 12px;">
+              请在下方手动输入Cron表达式
+            </div>
+          </div>
+          
+          <!-- Cron表达式显示 -->
           <el-input 
             v-model="taskForm.cron_expression" 
-            placeholder="例如: */2 * * * *" 
+            placeholder="Cron表达式将自动生成或手动输入" 
             class="claude-input"
+            @input="onCronInputChange"
           />
+          
+          <!-- 下次执行时间预览 -->
+          <div v-if="taskForm.cron_expression && nextRunTimes.length > 0" class="cron-preview" style="margin-top: 8px; padding: 8px; background: #f0f9ff; border-left: 3px solid #409eff; border-radius: 4px;">
+            <div style="color: #409eff; font-size: 13px; font-weight: 500; margin-bottom: 4px;">
+              下次执行时间预览：
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div v-for="(time, index) in nextRunTimes" :key="index" style="color: #606266; font-size: 12px;">
+                第{{ index + 1 }}次：{{ formatDateTime(time) }}
+              </div>
+            </div>
+          </div>
+          
           <div class="form-tip claude-caption mt-1">
             🕐 5字段格式（分 时 日 月 周），例：<br>
             <code class="claude-code">*/2 * * * *</code> - 每2分钟 | 
-            <code class="claude-code">0 0 2 * * *</code> - 每天凌晨2点
+            <code class="claude-code">0 2 * * *</code> - 每天凌晨2点
           </div>
         </el-form-item>
         <el-form-item label="导出路径" prop="export_path">
@@ -373,7 +477,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTasks, createTask, updateTask, deleteTask, enableTask, disableTask, triggerTask } from '@/api/sqlExport'
 
@@ -432,6 +536,19 @@ const taskForm = reactive({
   description: ''
 })
 
+// Cron配置
+const cronConfig = reactive({
+  frequency: 'daily', // minute, hourly, daily, weekly, monthly, custom
+  minuteInterval: 2,
+  minute: 0,
+  dailyTime: '02:00',
+  weekDay: '1',
+  monthDay: 1
+})
+
+// 下次执行时间
+const nextRunTimes = ref([])
+
 const rules = {
   task_name: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
   datasource_type: [{ required: true, message: '请选择数据源类型', trigger: 'change' }],
@@ -439,6 +556,202 @@ const rules = {
   cron_expression: [{ required: true, message: '请输入Cron表达式', trigger: 'blur' }],
   export_path: [{ required: true, message: '请输入导出路径', trigger: 'blur' }],
   filename_prefix: [{ required: true, message: '请输入文件名前缀', trigger: 'blur' }]
+}
+
+// 计算实际时间
+const computedStartTime = computed(() => {
+  const startParam = taskForm.time_params.start_time
+  if (startParam.type === 'fixed') {
+    return startParam.fixed_time || '-'
+  }
+  
+  // 相对时间计算
+  const now = new Date()
+  const offsetDays = startParam.offset_days || 0
+  const timeOfDay = startParam.time_of_day || '00:00:00'
+  
+  const targetDate = new Date(now.getTime() + offsetDays * 24 * 60 * 60 * 1000)
+  const [hours, minutes, seconds] = timeOfDay.split(':').map(Number)
+  
+  targetDate.setHours(hours, minutes, seconds, 0)
+  
+  return formatDateTime(targetDate)
+})
+
+const computedEndTime = computed(() => {
+  const endParam = taskForm.time_params.end_time
+  if (endParam.type === 'fixed') {
+    return endParam.fixed_time || '-'
+  }
+  
+  // 相对时间计算
+  const now = new Date()
+  const offsetDays = endParam.offset_days || 0
+  const timeOfDay = endParam.time_of_day || '23:59:59'
+  
+  const targetDate = new Date(now.getTime() + offsetDays * 24 * 60 * 60 * 1000)
+  const [hours, minutes, seconds] = timeOfDay.split(':').map(Number)
+  
+  targetDate.setHours(hours, minutes, seconds, 0)
+  
+  return formatDateTime(targetDate)
+})
+
+const formatDateTime = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+// 生成Cron表达式
+const generateCron = () => {
+  let cron = ''
+  
+  switch (cronConfig.frequency) {
+    case 'minute':
+      cron = `*/${cronConfig.minuteInterval} * * * *`
+      break
+    case 'hourly':
+      cron = `${cronConfig.minute} * * * *`
+      break
+    case 'daily': {
+      const [hour, minute] = cronConfig.dailyTime.split(':').map(Number)
+      cron = `${minute} ${hour} * * *`
+      break
+    }
+    case 'weekly': {
+      const [hour, minute] = cronConfig.dailyTime.split(':').map(Number)
+      cron = `${minute} ${hour} * * ${cronConfig.weekDay}`
+      break
+    }
+    case 'monthly': {
+      const [hour, minute] = cronConfig.dailyTime.split(':').map(Number)
+      cron = `${minute} ${hour} ${cronConfig.monthDay} * *`
+      break
+    }
+    case 'custom':
+      // 自定义模式不自动生成
+      return
+  }
+  
+  taskForm.cron_expression = cron
+  calculateNextRunTimes()
+}
+
+// 解析手动输入的Cron表达式
+const onCronInputChange = () => {
+  // 当用户手动输入时，切换到自定义模式
+  cronConfig.frequency = 'custom'
+  calculateNextRunTimes()
+}
+
+// 解析手动输入的Cron表达式（已废弃，使用onCronInputChange）
+const parseCron = () => {
+  const cron = taskForm.cron_expression.trim()
+  if (!cron) return
+  
+  calculateNextRunTimes()
+}
+
+// 计算下次执行时间
+const calculateNextRunTimes = () => {
+  const cron = taskForm.cron_expression.trim()
+  if (!cron) {
+    nextRunTimes.value = []
+    return
+  }
+  
+  try {
+    const parts = cron.split(/\s+/)
+    if (parts.length !== 5) {
+      nextRunTimes.value = []
+      return
+    }
+    
+    const [minute, hour, day, month, weekDay] = parts
+    const times = []
+    const now = new Date()
+    
+    // 简化的下次执行时间计算（仅支持常见模式）
+    for (let i = 0; i < 3; i++) {
+      const nextTime = calculateNextTime(now, { minute, hour, day, month, weekDay }, i)
+      if (nextTime) {
+        times.push(nextTime)
+      }
+    }
+    
+    nextRunTimes.value = times
+  } catch (e) {
+    nextRunTimes.value = []
+  }
+}
+
+// 计算下一次执行时间
+const calculateNextTime = (fromTime, cron, offset = 0) => {
+  const { minute, hour, day, month, weekDay } = cron
+  
+  // 解析字段值
+  const parseField = (field, min, max) => {
+    if (field === '*') return null
+    if (field.includes('/')) {
+      const [, step] = field.split('/')
+      return { step: parseInt(step), base: min }
+    }
+    return parseInt(field)
+  }
+  
+  const minuteVal = parseField(minute, 0, 59)
+  const hourVal = parseField(hour, 0, 23)
+  const dayVal = parseField(day, 1, 31)
+  const monthVal = parseField(month, 1, 12)
+  const weekDayVal = parseField(weekDay, 0, 6)
+  
+  // 简化计算：对于常见模式给出近似值
+  const next = new Date(fromTime.getTime())
+  
+  if (minute.includes('/') && hour === '*') {
+    // 每N分钟
+    const step = parseInt(minute.split('/')[1])
+    next.setMinutes(next.getMinutes() + step * (offset + 1))
+    return next
+  }
+  
+  if (hour !== '*' && minute !== '*') {
+    // 具体时间
+    const targetHour = parseInt(hour)
+    const targetMinute = parseInt(minute)
+    
+    next.setHours(targetHour, targetMinute, 0, 0)
+    
+    if (next <= fromTime || offset > 0) {
+      // 需要加一天
+      if (weekDay !== '*') {
+        // 每周的某天
+        const targetWeekDay = parseInt(weekDay)
+        const currentWeekDay = next.getDay()
+        let daysToAdd = (targetWeekDay - currentWeekDay + 7) % 7
+        if (daysToAdd === 0 && (next <= fromTime || offset > 0)) {
+          daysToAdd = 7
+        }
+        next.setDate(next.getDate() + daysToAdd * (offset + (next <= fromTime ? 0 : 1)))
+      } else if (day !== '*') {
+        // 每月的某天
+        next.setMonth(next.getMonth() + (offset + (next <= fromTime ? 1 : 0)))
+      } else {
+        // 每天
+        next.setDate(next.getDate() + (offset + (next <= fromTime ? 1 : 0)))
+      }
+    }
+    
+    return next
+  }
+  
+  return null
 }
 
 // 加载任务列表
@@ -479,7 +792,49 @@ const showCreateDialog = () => {
 const showEditDialog = (row) => {
   dialogTitle.value = '编辑任务'
   Object.assign(taskForm, row)
+  
+  // 解析已有的Cron表达式
+  parseExistingCron(row.cron_expression)
+  
   dialogVisible.value = true
+}
+
+// 解析已有的Cron表达式
+const parseExistingCron = (cron) => {
+  if (!cron) return
+  
+  const parts = cron.trim().split(/\s+/)
+  if (parts.length !== 5) return
+  
+  const [minute, hour, day, month, weekDay] = parts
+  
+  // 尝试识别模式
+  if (minute.includes('/') && hour === '*' && day === '*' && month === '*' && weekDay === '*') {
+    // 每N分钟
+    cronConfig.frequency = 'minute'
+    cronConfig.minuteInterval = parseInt(minute.split('/')[1])
+  } else if (minute !== '*' && hour === '*' && day === '*' && month === '*' && weekDay === '*') {
+    // 每小时
+    cronConfig.frequency = 'hourly'
+    cronConfig.minute = parseInt(minute)
+  } else if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && weekDay === '*') {
+    // 每天
+    cronConfig.frequency = 'daily'
+    cronConfig.dailyTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+  } else if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && weekDay !== '*') {
+    // 每周
+    cronConfig.frequency = 'weekly'
+    cronConfig.weekDay = weekDay
+    cronConfig.dailyTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+  } else if (minute !== '*' && hour !== '*' && day !== '*' && month === '*' && weekDay === '*') {
+    // 每月
+    cronConfig.frequency = 'monthly'
+    cronConfig.monthDay = parseInt(day)
+    cronConfig.dailyTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+  } else {
+    // 自定义
+    cronConfig.frequency = 'custom'
+  }
 }
 
 // 重置表单
@@ -519,6 +874,18 @@ const resetForm = () => {
     is_enabled: 1,
     description: ''
   })
+  
+  // 重置Cron配置
+  Object.assign(cronConfig, {
+    frequency: 'daily',
+    minuteInterval: 2,
+    minute: 0,
+    dailyTime: '02:00',
+    weekDay: '1',
+    monthDay: 1
+  })
+  nextRunTimes.value = []
+  
   formRef.value?.clearValidate()
 }
 
