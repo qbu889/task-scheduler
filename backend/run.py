@@ -3,6 +3,7 @@
 """
 import os
 import sys
+from dotenv import load_dotenv
 from app import create_app
 from config import Config
 import logging
@@ -18,6 +19,23 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# 加载环境变量
+# 先加载默认配置
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+
+# 根据环境加载特定配置文件
+env = os.getenv('FLASK_ENV', 'development')
+if env == 'production':
+    prod_env_file = os.path.join(os.path.dirname(__file__), '.env.production')
+    if os.path.exists(prod_env_file):
+        load_dotenv(prod_env_file, override=True)
+        logger.info(f"Loaded production environment from .env.production")
+elif env == 'development':
+    dev_env_file = os.path.join(os.path.dirname(__file__), '.env.development')
+    if os.path.exists(dev_env_file):
+        load_dotenv(dev_env_file, override=True)
+        logger.info(f"Loaded development environment from .env.development")
 
 
 def main():
@@ -35,6 +53,7 @@ def main():
     debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
     
     logger.info(f"Server running on http://{host}:{port}")
+    logger.info(f"Debug mode: {debug}")
     app.run(host=host, port=port, debug=debug)
 
 

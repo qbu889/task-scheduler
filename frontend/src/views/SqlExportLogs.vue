@@ -180,7 +180,7 @@ const downloadFile = async (row) => {
   }
   
   try {
-    const downloadUrl = `http://localhost:5000/api/sql-export/logs/${row.log_id}/download`
+    const downloadUrl = `/api/sql-export/logs/${row.log_id}/download`
     
     // 使用 fetch 获取文件
     const response = await fetch(downloadUrl)

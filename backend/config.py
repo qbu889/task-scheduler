@@ -53,10 +53,24 @@ class ProductionConfig(BaseConfig):
     DM_PORT = os.getenv('DM_PORT', '5236')
     DM_DATABASE = os.getenv('DM_DATABASE', 'TASK_DB')
     
-    SQLALCHEMY_DATABASE_URI = (
-        f'dm+dmPython://{DM_USER}:{DM_PASSWORD}@'
-        f'{DM_HOST}:{DM_PORT}/{DM_DATABASE}?charset=utf8'
-    )
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        # 延迟检查达梦驱动是否已安装
+        try:
+            import dmPython
+            import sqlalchemy_dm
+            return (
+                f'dm+dmPython://{self.DM_USER}:{self.DM_PASSWORD}@'
+                f'{self.DM_HOST}:{self.DM_PORT}/{self.DM_DATABASE}?charset=utf8'
+            )
+        except ImportError:
+            raise ImportError(
+                "生产环境需要达梦数据库驱动，请手动安装:\n"
+                "1. 从达梦数据库安装包的 drivers/python 目录获取 dmPython 和 sqlalchemy_dm 源码\n"
+                "2. 编译安装: cd dmPython && python setup.py install\n"
+                "3. 编译安装: cd sqlalchemy_dm && python setup.py install\n"
+                "详细步骤请参考达梦官方文档"
+            )
     
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 10,

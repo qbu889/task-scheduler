@@ -25,14 +25,27 @@ cd "$PROJECT_ROOT"
 
 echo -e "${YELLOW}[1/4] 检查环境变量...${NC}"
 
+# 加载生产环境配置文件
+ENV_FILE="$PROJECT_ROOT/backend/.env.production"
+if [ -f "$ENV_FILE" ]; then
+    echo -e "${GREEN}✓ 找到环境配置文件: $ENV_FILE${NC}"
+    # 导出所有环境变量(排除注释行和空行)
+    set -a
+    source "$ENV_FILE"
+    set +a
+else
+    echo -e "${RED}错误: 未找到环境配置文件 $ENV_FILE${NC}"
+    exit 1
+fi
+
 # 检查必需的环境变量
 if [ -z "$DM_HOST" ]; then
     echo -e "${RED}错误: 未设置 DM_HOST 环境变量${NC}"
-    echo -e "${YELLOW}请设置以下环境变量:${NC}"
-    echo "  export DM_HOST=your_dm_host"
-    echo "  export DM_USER=SYSDBA"
-    echo "  export DM_PASSWORD=your_password"
-    echo "  export DM_DATABASE=TASK_DB"
+    echo -e "${YELLOW}请在 backend/.env.production 中设置以下配置:${NC}"
+    echo "  DM_HOST=your_dm_host"
+    echo "  DM_USER=SYSDBA"
+    echo "  DM_PASSWORD=your_password"
+    echo "  DM_DATABASE=TASK_DB"
     exit 1
 fi
 
